@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Your Package - Superior Audio & Video</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .tracking-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .tracking-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .tracking-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .track-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            background: #0891b2;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .track-btn:hover {
+            background: #0e7490;
+        }
+        .package-result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f0f9ff;
+            border: 2px solid #0891b2;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-signed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .error-message {
+            padding: 20px;
+            background: #fee2e2;
+            border: 2px solid #ef4444;
+            border-radius: 10px;
+            color: #991b1b;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="tracking-container">
+        <div class="tracking-header">
+            <h1>📦 Track Your Package</h1>
+            <p>Enter your tracking number to see your package status</p>
+        </div>
+        
+        <input type="text" id="trackingInput" class="tracking-input" placeholder="Enter tracking number..." />
+        <button class="track-btn" onclick="trackPackage()">🔍 Track Package</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function trackPackage() {
+            const tracking = document.getElementById('trackingInput').value.trim();
+            const resultDiv = document.getElementById('result');
+            
+            if (!tracking) {
+                resultDiv.innerHTML = '<div class="error-message">Please enter a tracking number</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/track/${tracking}`);
+                
+                if (response.ok) {
+                    const pkg = await response.json();
+                    const statusClass = pkg.status === 'signed' ? 'status-signed' : 'status-pending';
+                    const statusText = pkg.status === 'signed' ? '✅ Delivered & Signed' : '📦 In Transit';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="package-result">
+                            <h2>Package Found!</h2>
+                            <p><strong>Courier:</strong> ${pkg.courier}</p>
+                            <p><strong>Tracking:</strong> ${pkg.tracking}</p>
+                            <p><strong>Recipient:</strong> ${pkg.name}</p>
+                            <p><strong>Received:</strong> ${new Date(pkg.created_at).toLocaleString()}</p>
+                            ${pkg.signed_at ? `<p><strong>Signed:</strong> ${new Date(pkg.signed_at).toLocaleString()}</p>` : ''}
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="error-message">❌ Package not found. Please check your tracking number.</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error-message">❌ Error connecting to server. Please try again.</div>';
+            }
+        }
+        
+        // Allow Enter key to search
+        document.getElementById('trackingInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                trackPackage();
+            }
+        });
+    </script>
+</body>
+</html>
