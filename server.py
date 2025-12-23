@@ -201,7 +201,7 @@ def create_user():
     except sqlite3.IntegrityError:
         return jsonify({'success': False, 'message': 'Username already exists'}), 400
 
-@app.route('/api/users/<username>/password', methods='PUT'])
+@app.route('/api/users/<username>/password', methods=['PUT'])
 def reset_password(username):
     data = request.json
     new_password = data.get('password')
@@ -219,3 +219,4 @@ def reset_password(username):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
