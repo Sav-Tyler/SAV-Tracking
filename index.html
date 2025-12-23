@@ -3,36 +3,344 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAV Package Tracking</title>
+    <title>Superior Audio & Video - Package Tracking</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .main-container {
+            max-width: 900px;
+            width: 90%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .staff-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        .staff-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .staff-btn:hover {
+            background: white;
+            color: #0891b2;
+        }
+        .tracking-section {
+            padding: 60px 40px;
+            text-align: center;
+        }
+        .tracking-section h2 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .tracking-input {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.3em;
+            border: 3px solid #ddd;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+        .tracking-input:focus {
+            outline: none;
+            border-color: #0891b2;
+        }
+        .track-btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.3em;
+            background: #0891b2;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .track-btn:hover {
+            background: #0e7490;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        #trackingResult {
+            margin-top: 30px;
+        }
+        .package-result {
+            background: #f0f9ff;
+            border: 3px solid #0891b2;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: left;
+        }
+        .package-result h3 {
+            color: #0891b2;
+            margin-top: 0;
+        }
+        .info-line {
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .info-line:last-child {
+            border-bottom: none;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-signed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .error-message {
+            background: #fee2e2;
+            border: 3px solid #ef4444;
+            border-radius: 12px;
+            padding: 20px;
+            color: #991b1b;
+        }
+        
+        /* Staff Login Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 2em;
+            cursor: pointer;
+            color: #999;
+        }
+        .close-btn:hover {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #0891b2;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: #0891b2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .login-btn:hover {
+            background: #0e7490;
+        }
+    </style>
 </head>
 <body>
-    <h1>📦 Superior Audio & Video</h1>
-    
-    <div id="loginPage">
-        <div class="card">
-            <h2>🔐 Admin Login</h2>
-            <input type="text" id="username" placeholder="Username" value="sav">
-            <input type="password" id="password" placeholder="Password">
-            <button onclick="doLogin()">🚀 Login</button>
-            <p style="text-align: center; margin-top: 20px;">
-                <a href="#" onclick="showPublicSearch(); return false;" style="color: #007cba;">🔍 Public Tracking Search</a>
-            </p>
+    <div class="main-container">
+        <div class="header">
+            <div class="staff-menu">
+                <button class="staff-btn" onclick="openStaffLogin()">👤 Staff Login</button>
+            </div>
+            <h1>📦 Package Tracking</h1>
+            <p>Track your packages with Superior Audio & Video</p>
+        </div>
+        
+        <div class="tracking-section">
+            <h2>Track Your Package</h2>
+            <input type="text" id="trackingInput" class="tracking-input" placeholder="Enter your tracking number..." />
+            <button class="track-btn" onclick="trackPackage()">🔍 Track Package</button>
+            <div id="trackingResult"></div>
         </div>
     </div>
 
-    <div id="publicSearch" class="hidden">
-        <div class="card">
-            <h2>🔍 Track Your Package</h2>
-            <input type="text" id="publicTracking" placeholder="Enter Tracking Number">
-            <button onclick="publicTrack()">🔎 Search</button>
-            <div id="publicResult"></div>
-            <p style="text-align: center; margin-top: 20px;">
-                <a href="#" onclick="showLogin(); return false;" style="color: #007cba;">👨‍💼 Admin Login</a>
-            </p>
+    <!-- Staff Login Modal -->
+    <div id="staffModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔐 Staff Login</h2>
+                <button class="close-btn" onclick="closeStaffLogin()">×</button>
+            </div>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="staffUsername" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="staffPassword" placeholder="Enter password">
+            </div>
+            <button class="login-btn" onclick="staffLogin()">Login</button>
         </div>
     </div>
 
-    <script src="auth.js"></script>
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        async function trackPackage() {
+            const tracking = document.getElementById('trackingInput').value.trim();
+            const resultDiv = document.getElementById('trackingResult');
+            
+            if (!tracking) {
+                resultDiv.innerHTML = '<div class="error-message">Please enter a tracking number</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/track/${tracking}`);
+                
+                if (response.ok) {
+                    const pkg = await response.json();
+                    const statusClass = pkg.status === 'signed' ? 'status-signed' : 'status-pending';
+                    const statusText = pkg.status === 'signed' ? '✅ Delivered & Signed' : '📦 Available for Pickup';
+                    
+                    resultDiv.innerHTML = `
+                        <div class="package-result">
+                            <h3>📦 Package Found!</h3>
+                            <div class="info-line"><strong>Courier:</strong> ${pkg.courier}</div>
+                            <div class="info-line"><strong>Tracking Number:</strong> ${pkg.tracking}</div>
+                            <div class="info-line"><strong>Recipient:</strong> ${pkg.name}</div>
+                            <div class="info-line"><strong>Received:</strong> ${new Date(pkg.created_at).toLocaleString()}</div>
+                            ${pkg.signed_at ? `<div class="info-line"><strong>Picked Up:</strong> ${new Date(pkg.signed_at).toLocaleString()}</div>` : ''}
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="error-message">❌ Package not found. Please check your tracking number and try again.</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div class="error-message">❌ Error connecting to server. Please try again later.</div>';
+            }
+        }
+        
+        // Allow Enter key to search
+        document.getElementById('trackingInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') trackPackage();
+        });
+
+        function openStaffLogin() {
+            document.getElementById('staffModal').classList.add('active');
+        }
+
+        function closeStaffLogin() {
+            document.getElementById('staffModal').classList.remove('active');
+        }
+
+        async function staffLogin() {
+            const username = document.getElementById('staffUsername').value;
+            const password = document.getElementById('staffPassword').value;
+            
+            if (!username || !password) {
+                alert('Please enter username and password');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    sessionStorage.setItem('currentUser', data.username);
+                    sessionStorage.setItem('userRole', data.role);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert('❌ Invalid credentials');
+                }
+            } catch (error) {
+                alert('❌ Error logging in. Please try again.');
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('staffModal').addEventListener('click', function(e) {
+            if (e.target === this) closeStaffLogin();
+        });
+    </script>
 </body>
 </html>
