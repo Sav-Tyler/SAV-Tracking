@@ -497,6 +497,15 @@
                 <!-- Signature Section -->
                 <div class="signature-section" id="signatureSection" style="display: none;">
                     <h3>✍️ Customer Signature</h3>
+                                        <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;">Customer Name:</label>
+                        <input type="text" id="customerNameInput" placeholder="Enter customer name..." style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em;">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;">Optional Photo (ID or Package):</label>
+                        <input type="file" id="customerPhotoInput" accept="image/*" capture="environment" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
+                        <small style="color: #666; display: block; margin-top: 5px;">📸 Tap to take a photo with your device camera</small>
+                    </div>
                     <p style="margin-bottom: 15px; color: #666;">
                         Please have the customer sign below using touch or stylus
                     </p>
@@ -764,4 +773,5 @@
     </script>
 </body>
 </html>
+
 
