@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAV Admin</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>🔐 Admin Panel</h1>
+    
+    <div class="header">
+        <span id="welcomeUser"></span>
+        <div class="btn-group">
+            <button onclick="location.href='dashboard.html'">🏠 Dashboard</button>
+            <button onclick="logout()">🚪 Logout</button>
+        </div>
+    </div>
+    
+    <div class="admin-only card">
+        <h3>User Management</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2">
+            <div class="card">
+                <h4>👤 Create User</h4>
+                <input type="text" id="newUsername" placeholder="Username">
+                <input type="password" id="newPassword" placeholder="Password">
+                <select id="newRole">
+                    <option value="standard">Standard</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <button onclick="createUser()">💾 Save</button>
+            </div>
+            
+            <div class="card">
+                <h4>🔑 Reset Password</h4>
+                <input type="text" id="resetUsername" placeholder="Username">
+                <input type="password" id="resetPassword" placeholder="New Password">
+                <button onclick="resetPassword()">🔄 Reset</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h4>📋 Users</h4>
+            <div id="userList" class="scrollable"></div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

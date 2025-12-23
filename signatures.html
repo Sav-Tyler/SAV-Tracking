@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAV Signatures</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .user-info {
+            text-align: left;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: #0891b2;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .nav-btn:hover {
+            background: #0e7490;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .search-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .search-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #0891b2;
+        }
+
+        .load-btn {
+            background: #0891b2;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .load-btn:hover {
+            background: #0e7490;
+        }
+
+        .packages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .package-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .package-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .package-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 2px solid #ddd;
+        }
+
+        .package-info {
+            margin-bottom: 10px;
+        }
+
+        .package-info strong {
+            color: #667eea;
+            display: inline-block;
+            min-width: 100px;
+        }
+
+        .signature-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .signature-canvas {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: crosshair;
+            width: 100%;
+            background: #fafafa;
+            margin: 15px 0;
+        }
+
+        .signature-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .clear-btn, .save-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .clear-btn {
+            background: #6c757d;
+            color: white;
+        }
+
+        .clear-btn:hover {
+            background: #5a6268;
+        }
+
+        .save-btn {
+            background: #10b981;
+            color: white;
+        }
+
+        .save-btn:hover {
+            background: #059669;
+        }
+
+        .no-packages {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.2em;
+            background: white;
+            border-radius: 15px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-signed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Packages Awaiting Signature</h1>
+            <div class="user-info">Welcome, <span id="username">User</span></div>
+            <div class="nav-buttons">
+                <button class="nav-btn" onclick="window.location.href='dashboard.html'">🏠 Dashboard</button>
+                <button class="nav-btn" onclick="window.location.href='logout.html'">🚪 Logout</button>
+            </div>
+        </div>
+
+        <div class="search-section">
+            <h2>Search Packages</h2>
+            <input type="text" id="searchInput" class="search-box" placeholder="Search by name, tracking, phone, or postal...">
+            <button class="load-btn" onclick="loadPackages()">📋 Load Packages</button>
+        </div>
+
+        <div id="packagesContainer"></div>
+    </div>
+
+    <script>
+        // Check authentication
+        const currentUser = sessionStorage.getItem('currentUser');
+        if (!currentUser) {
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('username').textContent = currentUser;
+        }
+
+        let packages = [];
+
+        async function loadPackages() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            try {
+                const response = await fetch('/api/packages/pending');
+                if (response.ok) {
+                    packages = await response.json();
+                    
+                    // Filter packages based on search
+                    if (searchTerm) {
+                        packages = packages.filter(pkg => 
+                            pkg.name?.toLowerCase().includes(searchTerm) ||
+                            pkg.tracking?.toLowerCase().includes(searchTerm) ||
+                            pkg.phone?.toLowerCase().includes(searchTerm) ||
+                            pkg.postal?.toLowerCase().includes(searchTerm)
+                        );
+                    }
+                    
+                    displayPackages(packages);
+                } else {
+                    alert('Failed to load packages');
+                }
+            } catch (error) {
+                console.error('Error loading packages:', error);
+                alert('Error loading packages. Please try again.');
+            }
+        }
+
+        function displayPackages(pkgs) {
+            const container = document.getElementById('packagesContainer');
+            
+            if (pkgs.length === 0) {
+                container.innerHTML = '<div class="no-packages">No packages found awaiting signature</div>';
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'packages-grid';
+
+            pkgs.forEach(pkg => {
+                const card = createPackageCard(pkg);
+                grid.appendChild(card);
+            });
+
+            container.innerHTML = '';
+            container.appendChild(grid);
+        }
+
+        function createPackageCard(pkg) {
+            const card = document.createElement('div');
+            card.className = 'package-card';
+            card.innerHTML = `
+                <img src="${pkg.labelImage || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>'}" 
+                     class="package-image" alt="Package Label">
+                <div class="package-info"><strong>Courier:</strong> ${pkg.courier}</div>
+                <div class="package-info"><strong>Name:</strong> ${pkg.name}</div>
+                <div class="package-info"><strong>Tracking:</strong> ${pkg.tracking}</div>
+                <div class="package-info"><strong>Phone:</strong> ${pkg.phone || 'N/A'}</div>
+                <div class="package-info"><strong>Postal:</strong> ${pkg.postal}</div>
+                <div class="package-info"><strong>Added:</strong> ${new Date(pkg.created_at).toLocaleString()}</div>
+                <span class="status-badge status-pending">⏳ Awaiting Signature</span>
+                
+                <div class="signature-section">
+                    <strong>Customer Signature:</strong>
+                    anvas id="canvas-${pkg.id}" class="signature-canvas" width="300" height="150"></canvas>
+                    <div class="signature-buttons">
+                        <button class="clear-btn" onclick="clearSignature(${pkg.id})">🗑️ Clear</button>
+                        <button class="save-btn" onclick="saveSignature(${pkg.id})">✅ Save & Archive</button>
+                    </div>
+                </div>
+            `;
+
+            // Initialize canvas
+            setTimeout(() => initCanvas(pkg.id), 100);
+
+            return card;
+        }
+
+        const canvasStates = {};
+
+        function initCanvas(pkgId) {
+            const canvas = document.getElementById(`canvas-${pkgId}`);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+
+            canvasStates[pkgId] = { canvas, ctx, drawing: false };
+
+            canvas.addEventListener('mousedown', (e) => startDrawing(e, pkgId));
+            canvas.addEventListener('mousemove', (e) => draw(e, pkgId));
+            canvas.addEventListener('mouseup', () => stopDrawing(pkgId));
+            canvas.addEventListener('mouseout', () => stopDrawing(pkgId));
+
+            // Touch support
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            });
+
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                const mouseEvent = new MouseEvent('mouseup', {});
+                canvas.dispatchEvent(mouseEvent);
+            });
+        }
+
+        function startDrawing(e, pkgId) {
+            const state = canvasStates[pkgId];
+            if (!state) return;
+
+            state.drawing = true;
+            const rect = state.canvas.getBoundingClientRect();
+            state.ctx.beginPath();
+            state.ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        }
+
+        function draw(e, pkgId) {
+            const state = canvasStates[pkgId];
+            if (!state || !state.drawing) return;
+
+            const rect = state.canvas.getBoundingClientRect();
+            state.ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            state.ctx.strokeStyle = '#000';
+            state.ctx.lineWidth = 2;
+            state.ctx.lineCap = 'round';
+            state.ctx.stroke();
+        }
+
+        function stopDrawing(pkgId) {
+            const state = canvasStates[pkgId];
+            if (state) {
+                state.drawing = false;
+            }
+        }
+
+        function clearSignature(pkgId) {
+            const state = canvasStates[pkgId];
+            if (state) {
+                state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
+            }
+        }
+
+        async function saveSignature(pkgId) {
+            const state = canvasStates[pkgId];
+            if (!state) return;
+
+            // Get signature as base64
+            const signatureData = state.canvas.toDataURL('image/png');
+
+            // Check if signature is empty
+            const blankCanvas = document.createElement('canvas');
+            blankCanvas.width = state.canvas.width;
+            blankCanvas.height = state.canvas.height;
+            if (signatureData === blankCanvas.toDataURL('image/png')) {
+                alert('Please provide a signature before saving');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/packages/${pkgId}/sign`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.

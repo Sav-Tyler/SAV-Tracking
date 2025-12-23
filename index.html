@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAV Package Tracking</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>📦 Superior Audio & Video</h1>
+    
+    <div id="loginPage">
+        <div class="card">
+            <h2>🔐 Admin Login</h2>
+            <input type="text" id="username" placeholder="Username" value="sav">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="doLogin()">🚀 Login</button>
+            <p style="text-align: center; margin-top: 20px;">
+                <a href="#" onclick="showPublicSearch(); return false;" style="color: #007cba;">🔍 Public Tracking Search</a>
+            </p>
+        </div>
+    </div>
+
+    <div id="publicSearch" class="hidden">
+        <div class="card">
+            <h2>🔍 Track Your Package</h2>
+            <input type="text" id="publicTracking" placeholder="Enter Tracking Number">
+            <button onclick="publicTrack()">🔎 Search</button>
+            <div id="publicResult"></div>
+            <p style="text-align: center; margin-top: 20px;">
+                <a href="#" onclick="showLogin(); return false;" style="color: #007cba;">👨‍💼 Admin Login</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html>

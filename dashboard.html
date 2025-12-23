@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAV Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="tesseract.min.js"></script>
+</head>
+<body>
+    <h1>📦 SAV Dashboard</h1>
+    
+    <div class="header">
+        <span id="welcomeUser"></span>
+        <div class="btn-group">
+            <button onclick="location.href='signatures.html'">✍️ Signatures</button>
+            <button onclick="location.href='archived.html'">📂 Archived</button>
+            <button onclick="location.href='admin.html'" id="adminBtn" class="hidden">🔐 Admin</button>
+            <button onclick="logout()">🚪 Logout</button>
+        </div>
+    </div>
+    
+    <!-- OCR Processing -->
+    <div class="section ocr-workflow card">
+        <h3>📦 Add Packages (OCR)</h3>
+        <label><strong>Courier:</strong></label>
+        <select id="courier">
+            <option value="Purolator">Purolator</option>
+            <option value="FedEx">FedEx</option>
+            <option value="UPS">UPS</option>
+            <option value="Dragonfly">Dragonfly</option>
+            <option value="Intelecom">Intelecom</option>
+            <option value="ICS">ICS</option>
+            <option value="Canpar">Canpar</option>
+        </select>
+        <label><strong>Label Photos:</strong></label>
+        <input type="file" id="labelImages" multiple accept="image/*">
+        <button onclick="processImages()">🚀 Process</button>
+        <div id="processing"></div>
+        <div id="pendingPackages"></div>
+        <div id="continueOrFinish" class="btn-group hidden">
+            <button onclick="continueBatch()">➕ More</button>
+            <button onclick="finishBatch()">✅ Finish</button>
+        </div>
+    </div>
+
+    <!-- Batch Summary -->
+    <div id="batchSummary" class="section customer-summary hidden card">
+        <h3>📋 Complete</h3>
+        <div id="customerSummaryList"></div>
+        <button onclick="returnToMainMenu()" class="batch-complete">🏠 Return</button>
+    </div>
+
+    <!-- Package Lookup -->
+    <div class="section card">
+        <h3>🔍 Lookup Packages</h3>
+        <input type="text" id="filterInput" placeholder="Search tracking, name, phone...">
+        <button onclick="filterPackages()">🔎 Search</button>
+        <div id="packageList" class="scrollable"></div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAV Archived</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>📂 Archived Packages</h1>
+    
+    <div class="header">
+        <span id="welcomeUser"></span>
+        <button onclick="location.href='dashboard.html'">🏠 Dashboard</button>
+    </div>
+    
+    <div class="section card">
+        <h3>Search Archived</h3>
+        <input type="text" id="archiveFilter" placeholder="Search...">
+        <button onclick="loadArchived()">📋 Load</button>
+        <div id="archiveList" class="scrollable"></div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="archived.js"></script>
+</body>
+</html>
