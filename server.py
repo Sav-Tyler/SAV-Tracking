@@ -277,9 +277,8 @@ def skip_package(package_id):
 def track_package(tracking_number):
     db = get_db()
     package = db.execute('''SELECT courier, name, tracking, status, created_at, signed_at 
-                           FROM packages WHERE tracking = ?''',
-                        (tracking_number,)).fetchone()
-    db.close()
+        FROM packages WHERE tracking = ?''',
+        (tracking_number,)).fetchone()
     
     if package:
         return jsonify(dict(package))
@@ -395,6 +394,7 @@ def lookup_customer(name):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
 
 
