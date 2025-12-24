@@ -229,3 +229,4 @@ async function filterPackages() {
         alert('❌ Error searching packages');
     }
 }
+
