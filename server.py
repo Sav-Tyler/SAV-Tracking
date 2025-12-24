@@ -171,12 +171,26 @@ def get_pending_packages():
     return jsonify([dict(p) for p in packages])
 
 @app.route('/api/packages/archived', methods=['GET'])
+@app.route('/api/packages/archived', methods=['GET'])
 def get_archived_packages():
     search = request.args.get('search', '')
     
     db = get_db()
+    if search:
+        packages = db.execute('''SELECT * FROM packages 
+            WHERE status = 'signed' AND
+            (name LIKE ? OR tracking LIKE ? OR phone LIKE ? OR postal LIKE ?)
+            ORDER BY signed_at DESC''',
+            (f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%')).fetchall()
+    else:
+        packages = db.execute('''SELECT * FROM packages 
+            WHERE status = 'signed' 
+            ORDER BY signed_at DESC LIMIT 100''').fetchall()
+    db.close()
+    
+    return jsonify([dict(p) for p in packages])
 
-    # Vision API for OCR
+# Vision API for OCR
 @app.route('/api/process-image', methods=['POST'])
 def process_image():
     try:
@@ -194,8 +208,8 @@ def process_image():
                 {
                     "role": "user",
                     "content": [
-                            {"type": "text", "text": "following information from this shipping label and return ONLY a valid JSON object with these
-                                                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}exact keys: 'courier' (company name: Purolator/FedEx/UPS/Dragonfly), 'name' (recipient full name), 'tracking' (tracking number - for Purolator look for PIN number, for others look for tracking/waybill number), 'phone' (phone number if visible), 'postal' (postal code), 'address' (full street address including city and province). If any field cannot be found, use empty string ''. Do not include any explanation, only return the JSON object."},
+                        {"type": "text", "text": "Extract the following information from this shipping label and return ONLY a valid JSON object with these exact keys: 'courier' (company name: Purolator/FedEx/UPS/Dragonfly), 'name' (recipient full name), 'tracking' (tracking number - for Purolator look for PIN number, for others look for tracking/waybill number), 'phone' (phone number if visible), 'postal' (postal code), 'address' (full street address including city and province). If any field cannot be found, use empty string ''. Do not include any explanation, only return the JSON object."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
                     ]
                 }
             ],
@@ -207,47 +221,32 @@ def process_image():
         
         # Try to parse as JSON
         try:
-            import json
             result = json.loads(result_text)
         except:
-            # If not valid JSON, return error
             return jsonify({'success': False, 'error': 'Failed to parse OCR result'})
-
-                
+        
         # Normalize postal code and address for Elliot Lake
         if 'postal' in result:
             result['postal'] = normalize_postal_code(result.get('postal', ''))
         if 'address' in result:
+            # Try to lookup customer in database
+            if 'name' in result and result.get('name'):
+                customer = lookup_customer(result['name'])
+                if customer:
+                    # Auto-fill missing data from customer database
+                    if not result.get('street') or not result.get('address'):
+                        result['street'] = customer.get('street', '')
+                        result['address'] = f"{customer['street']}, Elliot Lake, ON"
+                    if not result.get('postal'):
+                        result['postal'] = customer.get('postal', '')
+                    if not result.get('phone'):
+                        result['phone'] = customer.get('phone', '')
+            result['address'] = normalize_address(result.get('address', ''), result.get('postal', ''))
         
-                    # Try to lookup customer in database
-        if 'name' in result and result.get('name'):
-            customer = lookup_customer(result['name'])
-            if customer:
-                # Auto-fill missing data from customer database
-                if not result.get('street') or not result.get('address'):
-                    result['street'] = customer.get('street', '')
-                    result['address'] = f"{customer['street']}, Elliot Lake, ON"
-                if not result.get('postal'):
-                    result['postal'] = customer.get('postal', '')
-                if not result.get('phone'):
-                    result['phone'] = customer.get('phone', '')
-result['address'] = normalize_address(result.get('address', ''), result.get('postal', ''))
         return jsonify({'success': True, 'data': result})
-        
-    except Exception as e:
-        result['address'] = normalize_address(result.get('address', ''), result.get('postal', ''))    if search:
-        packages = db.execute('''SELECT * FROM packages 
-                                WHERE status = 'signed' AND
-                                (name LIKE ? OR tracking LIKE ? OR phone LIKE ? OR postal LIKE ?)
-                                ORDER BY signed_at DESC''',
-                             (f'%{search}%', f'%{search}%', f'%{search}%', f'%{search}%')).fetchall()
-    else:
-        packages = db.execute('''SELECT * FROM packages 
-                                WHERE status = 'signed' 
-                                ORDER BY signed_at DESC LIMIT 100''').fetchall()
-    db.close()
     
-    return jsonify([dict(p) for p in packages])
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/packages/<int:package_id>/sign', methods=['POST'])
 def sign_package(package_id):
@@ -396,6 +395,7 @@ def lookup_customer(name):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
 
 
