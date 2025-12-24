@@ -171,7 +171,6 @@ def get_pending_packages():
     return jsonify([dict(p) for p in packages])
 
 @app.route('/api/packages/archived', methods=['GET'])
-@app.route('/api/packages/archived', methods=['GET'])
 def get_archived_packages():
     search = request.args.get('search', '')
     
@@ -394,6 +393,7 @@ def lookup_customer(name):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
 
 
