@@ -7,6 +7,7 @@ from datetime import datetime
 import os
 import base64
 import openai
+import cv2
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
@@ -265,5 +266,6 @@ def reset_password(username):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
 
