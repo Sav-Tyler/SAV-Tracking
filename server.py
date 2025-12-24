@@ -6,9 +6,13 @@ import secrets
 from datetime import datetime
 import os
 import base64
+import openai
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
+
+# OpenAI API configuration
+openai.api_key = os.getenv('OPENAI_API_KEY', '')  # Set your OpenAI API key in environment variable
 
 # Database file
 DATABASE = 'packages.db'
@@ -122,6 +126,48 @@ def get_archived_packages():
     search = request.args.get('search', '')
     
     db = get_db()
+
+    # Vision API for OCR
+@app.route('/api/process-image', methods=['POST'])
+def process_image():
+    try:
+        data = request.json
+        image_data = data.get('image', '')
+        
+        # Remove data URL prefix if present
+        if 'base64,' in image_data:
+            image_data = image_data.split('base64,')[1]
+        
+        # Call OpenAI Vision API
+        response = openai.ChatCompletion.create(
+            model="gpt-4-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Extract the following information from this package label: 1) Courier company name (Purolator/FedEx/UPS/Dragonfly), 2) Tracking number, 3) Recipient name. Return ONLY a JSON object with keys 'courier', 'tracking', and 'name'. If you cannot find any field, use empty string."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
+                    ]
+                }
+            ],
+            max_tokens=300
+        )
+        
+        # Parse the response
+        result_text = response.choices[0].message.content
+        
+        # Try to parse as JSON
+        try:
+            import json
+            result = json.loads(result_text)
+        except:
+            # If not valid JSON, return error
+            return jsonify({'success': False, 'error': 'Failed to parse OCR result'})
+        
+        return jsonify({'success': True, 'data': result})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
     if search:
         packages = db.execute('''SELECT * FROM packages 
                                 WHERE status = 'signed' AND
@@ -219,4 +265,5 @@ def reset_password(username):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
