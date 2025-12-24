@@ -1,0 +1,22 @@
+{
+  "addresses": [
+    {
+      "name": "John Smith",
+      "street": "123 Main Street",
+      "postal": "P5A 1A1",
+      "phone": "705-555-0101"
+    },
+    {
+      "name": "Jane Doe",
+      "street": "456 Ontario Avenue",
+      "postal": "P5A 2B2",
+      "phone": "705-555-0102"
+    },
+    {
+      "name": "Bob Johnson",
+      "street": "789 Hillside Drive",
+      "postal": "P5A 3C3",
+      "phone": "705-555-0103"
+    }
+  ]
+}
