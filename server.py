@@ -18,6 +18,48 @@ openai.api_key = os.getenv('OPENAI_API_KEY', '')  # Set your OpenAI API key in e
 # Database file
 DATABASE = 'packages.db'
 
+# Default location for packages
+DEFAULT_CITY = "Elliot Lake"
+DEFAULT_PROVINCE = "ON"
+DEFAULT_POSTAL_PREFIX = "P5A"
+
+# Function to normalize postal code
+def normalize_postal_code(postal):
+    """Ensure postal code is in correct format and add default prefix if needed"""
+    if not postal:
+        return DEFAULT_POSTAL_PREFIX
+    
+    postal = postal.upper().strip().replace(" ", "")
+    
+    # If only 3 characters provided (like "2S9"), add default prefix
+    if len(postal) == 3:
+        return f"{DEFAULT_POSTAL_PREFIX} {postal}"
+    
+    # If 6 characters without space, add space in middle
+    if len(postal) == 6:
+        return f"{postal[:3]} {postal[3:]}"
+    
+    return postal
+
+# Function to normalize address
+def normalize_address(address, postal):
+    """Add Elliot Lake, ON if not present in address"""
+    if not address:
+        return f"{DEFAULT_CITY}, {DEFAULT_PROVINCE}"
+    
+    address_lower = address.lower()
+    
+    # Check if city and province are already in address
+    has_city = 'elliot lake' in address_lower or 'elliott lake' in address_lower
+    has_province = ', on' in address_lower or ', ontario' in address_lower
+    
+    if not has_city and not has_province:
+        return f"{address}, {DEFAULT_CITY}, {DEFAULT_PROVINCE}"
+    elif not has_province:
+        return f"{address}, {DEFAULT_PROVINCE}"
+    
+    return address
+
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
@@ -99,15 +141,18 @@ def login():
 # Package APIs
 @app.route('/api/packages', methods=['POST'])
 def create_package():
-    data = request.json
+        data = request.json
+    
+    # Normalize postal code and address
+    postal = normalize_postal_code(data.get('postal', ''))
+    address = normalize_address(data.get('address', ''), postal)
     
     db = get_db()
     cursor = db.execute('''INSERT INTO packages 
-                          (courier, name, tracking, phone, postal, address, label_image, created_by)
-                          VALUES (?, ?, ?, ?, ?, ?, ?)''',
-                       (data['courier'], data['name'], data['tracking'],
-                        data.get('phone', ''), data['postal'],
-                                                data.get('address', ''),
+        (courier, name, tracking, phone, postal, address, label_image, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        (data['courier'], data['name'], data['tracking'],
+         data.get('phone', ''), postal, address,
                         data.get('labelImage', ''), data.get('createdBy', '')))
     db.commit()
     package_id = cursor.lastrowid
@@ -149,7 +194,7 @@ def process_image():
                 {
                     "role": "user",
                     "content": [
-                            {"type": "text", "text": "Extract the following information from this shipping label and return ONLY a valid JSON object with these exact keys: 'courier' (company name: Purolator/FedEx/UPS/Dragonfly), 'name' (recipient full name), 'tracking' (tracking number - for Purolator look for PIN number, for others look for tracking/waybill number), 'phone' (phone number if visible), 'postal' (postal code), 'address' (full street address including city and province). If any field cannot be found, use empty string ''. Do not include any explanation, only return the JSON object."},                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
+                            {"type": "text", "text": "following information from this shipping label and return ONLY a valid JSON object with these exact keys: 'courier' (company name: Purolator/FedEx/UPS/Dragonfly), 'name' (recipient full name), 'tracking' (tracking number - for Purolator look for PIN number, for others look for tracking/waybill number), 'phone' (phone number if visible), 'postal' (postal code), 'address' (full street address including city and province). If any field cannot be found, use empty string ''. Do not include any explanation, only return the JSON object."},
                     ]
                 }
             ],
@@ -166,7 +211,13 @@ def process_image():
         except:
             # If not valid JSON, return error
             return jsonify({'success': False, 'error': 'Failed to parse OCR result'})
-        
+
+                
+        # Normalize postal code and address for Elliot Lake
+        if 'postal' in result:
+            result['postal'] = normalize_postal_code(result.get('postal', ''))
+        if 'address' in result:
+            result['address'] = normalize_address(result.get('address', ''), result.get('postal', ''))
         return jsonify({'success': True, 'data': result})
         
     except Exception as e:
@@ -268,6 +319,7 @@ def reset_password(username):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
 
 
