@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Database - SAV Tracking</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="company-logo.png" alt="SAV Logo" class="logo">
+            <h1>Customer Database</h1>
+            <button onclick="logout()" class="logout-btn">Logout</button>
+        </div>
+
+        <div class="toolbar">
+            <input type="text" id="searchInput" placeholder="Search customers..." onkeyup="searchCustomers()">
+            <button onclick="showAddCustomerModal()" class="btn-primary">+ Add Customer</button>
+        </div>
+
+        <div class="customer-list">
+            <table id="customersTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Address</th>
+                        <th>Postal Code</th>
+                        <th>Phone</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="customersTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add/Edit Customer Modal -->
+    <div id="customerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Add Customer</h2>
+            <form id="customerForm" onsubmit="saveCustomer(event)">
+                <input type="hidden" id="customerId">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="customerName" required>
+                </div>
+                <div class="form-group">
+                    <label>Street Address *</label>
+                    <input type="text" id="customerStreet" required>
+                </div>
+                <div class="form-group">
+                    <label>Postal Code *</label>
+                    <input type="text" id="customerPostal" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="tel" id="customerPhone">
+                </div>
+                <div class="form-actions">
+                    <button type="button" onclick="closeModal()" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="customers.js"></script>
+</body>
+</html>
