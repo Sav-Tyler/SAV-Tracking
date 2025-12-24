@@ -8,6 +8,7 @@ import os
 import base64
 import openai
 import cv2
+import json
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
@@ -217,7 +218,20 @@ def process_image():
         if 'postal' in result:
             result['postal'] = normalize_postal_code(result.get('postal', ''))
         if 'address' in result:
-            result['address'] = normalize_address(result.get('address', ''), result.get('postal', ''))
+        
+                    # Try to lookup customer in database
+        if 'name' in result and result.get('name'):
+            customer = lookup_customer(result['name'])
+            if customer:
+                # Auto-fill missing data from customer database
+                if not result.get('street') or not result.get('address'):
+                    result['street'] = customer.get('street', '')
+                    result['address'] = f"{customer['street']}, Elliot Lake, ON"
+                if not result.get('postal'):
+                    result['postal'] = customer.get('postal', '')
+                if not result.get('phone'):
+                    result['phone'] = customer.get('phone', '')
+result['address'] = normalize_address(result.get('address', ''), result.get('postal', ''))
         return jsonify({'success': True, 'data': result})
         
     except Exception as e:
@@ -316,9 +330,74 @@ def reset_password(username):
     
     return jsonify({'success': True})
 
+
+
+# Customer Management APIs
+@app.route('/api/customers', methods=['GET'])
+def get_customers():
+    try:
+        with open('addresses.json', 'r') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except FileNotFoundError:
+        return jsonify({'addresses': []})
+
+@app.route('/api/customers', methods=['POST'])
+def add_customer():
+    data = request.json
+    try:
+        with open('addresses.json', 'r') as f:
+            customers = json.load(f)
+    except FileNotFoundError:
+        customers = {'addresses': []}
+    
+    customers['addresses'].append(data)
+    
+    with open('addresses.json', 'w') as f:
+        json.dump(customers, f, indent=2)
+    
+    return jsonify({'success': True})
+
+@app.route('/api/customers/<int:index>', methods=['PUT'])
+def update_customer(index):
+    data = request.json
+    with open('addresses.json', 'r') as f:
+        customers = json.load(f)
+    
+    if 0 <= index < len(customers['addresses']):
+        customers['addresses'][index] = data
+        with open('addresses.json', 'w') as f:
+            json.dump(customers, f, indent=2)
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 404
+
+@app.route('/api/customers/<int:index>', methods=['DELETE'])
+def delete_customer(index):
+    with open('addresses.json', 'r') as f:
+        customers = json.load(f)
+    
+    if 0 <= index < len(customers['addresses']):
+        customers['addresses'].pop(index)
+        with open('addresses.json', 'w') as f:
+            json.dump(customers, f, indent=2)
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 404
+
+# Customer lookup helper
+def lookup_customer(name):
+    try:
+        with open('addresses.json', 'r') as f:
+            customers = json.load(f)
+        for customer in customers.get('addresses', []):
+            if customer['name'].lower() == name.lower():
+                return customer
+    except:
+        pass
+    return None
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
 
 
