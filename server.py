@@ -144,7 +144,7 @@ def create_package():
         data = request.json
     
     # Normalize postal code and address
-        postal = normalize_postal_code(data.get('postal', ''))
+    postal = normalize_postal_code(data.get('postal', ''))
         address = normalize_address(data.get('address', ''), postal)
     
     db = get_db()
@@ -393,6 +393,7 @@ def lookup_customer(name):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
 
 
