@@ -48,6 +48,8 @@ def init_db():
             signature_image TEXT,
             status TEXT DEFAULT 'pending',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            postal TEXT,
+                address TEXT,
             signed_at TIMESTAMP,
             created_by TEXT
         )''')
@@ -101,10 +103,11 @@ def create_package():
     
     db = get_db()
     cursor = db.execute('''INSERT INTO packages 
-                          (courier, name, tracking, phone, postal, label_image, created_by)
+                          (courier, name, tracking, phone, postal, address, label_image, created_by)
                           VALUES (?, ?, ?, ?, ?, ?, ?)''',
                        (data['courier'], data['name'], data['tracking'],
                         data.get('phone', ''), data['postal'],
+                                                data.get('address', ''),
                         data.get('labelImage', ''), data.get('createdBy', '')))
     db.commit()
     package_id = cursor.lastrowid
@@ -146,8 +149,7 @@ def process_image():
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Extract the following information from this package label: 1) Courier company name (Purolator/FedEx/UPS/Dragonfly), 2) Tracking number, 3) Recipient name. Return ONLY a JSON object with keys 'courier', 'tracking', and 'name'. If you cannot find any field, use empty string."},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
+                            {"type": "text", "text": "Extract the following information from this shipping label and return ONLY a valid JSON object with these exact keys: 'courier' (company name: Purolator/FedEx/UPS/Dragonfly), 'name' (recipient full name), 'tracking' (tracking number - for Purolator look for PIN number, for others look for tracking/waybill number), 'phone' (phone number if visible), 'postal' (postal code), 'address' (full street address including city and province). If any field cannot be found, use empty string ''. Do not include any explanation, only return the JSON object."},                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
                     ]
                 }
             ],
@@ -266,6 +268,7 @@ def reset_password(username):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
 
 
