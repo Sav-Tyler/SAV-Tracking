@@ -95,7 +95,6 @@ def init_db():
                 address TEXT,
             signed_at TIMESTAMP,
             created_by TEXT
-        )''')
         
         # Create default admin user if doesn't exist
         try:
@@ -195,7 +194,8 @@ def process_image():
                 {
                     "role": "user",
                     "content": [
-                            {"type": "text", "text": "following information from this shipping label and return ONLY a valid JSON object with these exact keys: 'courier' (company name: Purolator/FedEx/UPS/Dragonfly), 'name' (recipient full name), 'tracking' (tracking number - for Purolator look for PIN number, for others look for tracking/waybill number), 'phone' (phone number if visible), 'postal' (postal code), 'address' (full street address including city and province). If any field cannot be found, use empty string ''. Do not include any explanation, only return the JSON object."},
+                            {"type": "text", "text": "following information from this shipping label and return ONLY a valid JSON object with these
+                                                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}exact keys: 'courier' (company name: Purolator/FedEx/UPS/Dragonfly), 'name' (recipient full name), 'tracking' (tracking number - for Purolator look for PIN number, for others look for tracking/waybill number), 'phone' (phone number if visible), 'postal' (postal code), 'address' (full street address including city and province). If any field cannot be found, use empty string ''. Do not include any explanation, only return the JSON object."},
                     ]
                 }
             ],
@@ -235,8 +235,7 @@ result['address'] = normalize_address(result.get('address', ''), result.get('pos
         return jsonify({'success': True, 'data': result})
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-    if search:
+        result['address'] = normalize_address(result.get('address', ''), result.get('postal', ''))    if search:
         packages = db.execute('''SELECT * FROM packages 
                                 WHERE status = 'signed' AND
                                 (name LIKE ? OR tracking LIKE ? OR phone LIKE ? OR postal LIKE ?)
@@ -397,6 +396,7 @@ def lookup_customer(name):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=5000, debug=True)
+
 
 
 
