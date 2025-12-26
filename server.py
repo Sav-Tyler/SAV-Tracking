@@ -6,15 +6,17 @@ import secrets
 from datetime import datetime
 import os
 import base64
-import openai
 import cv2
 import json
+import numpy as np
+from paddleocr import PaddleOCR
+import re
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
 
-# OpenAI API configuration
-openai.api_key = os.getenv('OPENAI_API_KEY', '')  # Set your OpenAI API key in environment variable
+# Initialize PaddleOCR (runs locally, no external API calls)
+ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False)
 
 # Database file
 DATABASE = 'packages.db'
@@ -23,7 +25,6 @@ DATABASE = 'packages.db'
 DEFAULT_CITY = "Elliot Lake"
 DEFAULT_PROVINCE = "ON"
 DEFAULT_POSTAL_PREFIX = "P5A"
-
 # Function to normalize postal code
 def normalize_postal_code(postal):
     """Ensure postal code is in correct format and add default prefix if needed"""
@@ -65,7 +66,6 @@ def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
-
 def init_db():
     with app.app_context():
         db = get_db()
@@ -79,7 +79,18 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )''')
         
-        # Packages table
+        # Customers table (NEW - replaces addresses.json)
+        db.execute('''CREATE TABLE IF NOT EXISTS customers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT UNIQUE,
+            email TEXT,
+            street TEXT,
+            postal TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+        
+        # Packages table (UPDATED - now links to customers)
         db.execute('''CREATE TABLE IF NOT EXISTS packages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             courier TEXT NOT NULL,
@@ -91,22 +102,35 @@ def init_db():
             signature_image TEXT,
             status TEXT DEFAULT 'pending',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                address TEXT,
+            address TEXT,
             signed_at TIMESTAMP,
-            created_by TEXT
-                        )''')
+            created_by TEXT,
+            customer_id INTEGER,
+            FOREIGN KEY (customer_id) REFERENCES customers(id)
+        )''')
+        
+        # Pickups table (NEW - for bulk pickup tracking)
+        db.execute('''CREATE TABLE IF NOT EXISTS pickups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            customer_id INTEGER NOT NULL,
+            pickup_name TEXT,
+            pickup_id_type TEXT,
+            pickup_id_number TEXT,
+            pickup_signature TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (customer_id) REFERENCES customers(id)
+        )''')
         
         # Create default admin user if doesn't exist
         try:
             password_hash = hashlib.sha256('admin123'.encode()).hexdigest()
             db.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-                      ('sav', password_hash, 'admin'))
+                     ('sav', password_hash, 'admin'))
             db.commit()
         except sqlite3.IntegrityError:
             pass  # User already exists
         
         db.close()
-
 # Serve HTML files
 @app.route('/')
 def index():
@@ -137,35 +161,71 @@ def login():
             'role': user['role']
         })
     return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
-
 # Package APIs
 @app.route('/api/packages', methods=['POST'])
 def create_package():
-        data = request.json
+    data = request.json
     
     # Normalize postal code and address
     postal = normalize_postal_code(data.get('postal', ''))
-        address = normalize_address(data.get('address', ''), postal)
+    address = normalize_address(data.get('address', ''), postal)
+    
+    # Try to find or create customer
+    customer_id = None
+    phone = data.get('phone', '')
+    name = data.get('name', '')
+    
+    if phone or name:
+        customer_id = find_or_create_customer(name, phone, address, postal)
     
     db = get_db()
     cursor = db.execute('''INSERT INTO packages 
-        (courier, name, tracking, phone, postal, address, label_image, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        (courier, name, tracking, phone, postal, address, label_image, created_by, customer_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
         (data['courier'], data['name'], data['tracking'],
-         data.get('phone', ''), postal, address,
-                        data.get('labelImage', ''), data.get('createdBy', '')))
+         phone, postal, address,
+         data.get('labelImage', ''), data.get('createdBy', ''), customer_id))
     db.commit()
     package_id = cursor.lastrowid
     db.close()
     
-    return jsonify({'success': True, 'id': package_id})
+    return jsonify({'success': True, 'id': package_id, 'customer_id': customer_id})
+
+def find_or_create_customer(name, phone, address, postal):
+    """Find existing customer or create new one, return customer_id"""
+    db = get_db()
+    
+    # Try to find by phone first (most reliable)
+    if phone:
+        customer = db.execute("SELECT id FROM customers WHERE phone = ?", (phone,)).fetchone()
+        if customer:
+            db.close()
+            return customer['id']
+    
+    # Try to find by exact name match
+    if name:
+        customer = db.execute("SELECT id FROM customers WHERE LOWER(name) = LOWER(?)", (name,)).fetchone()
+        if customer:
+            db.close()
+            return customer['id']
+    
+    # Customer not found, create new one
+    street = address.split(',')[0] if address else ''
+    cursor = db.execute('''INSERT INTO customers (name, phone, street, postal)
+                          VALUES (?, ?, ?, ?)''',
+                       (name, phone, street, postal))
+    db.commit()
+    customer_id = cursor.lastrowid
+    db.close()
+    
+    return customer_id
 
 @app.route('/api/packages/pending', methods=['GET'])
 def get_pending_packages():
     db = get_db()
     packages = db.execute('''SELECT * FROM packages 
-                            WHERE status = 'pending' 
-                            ORDER BY created_at DESC''').fetchall()
+        WHERE status = 'pending' 
+        ORDER BY created_at DESC''').fetchall()
     db.close()
     
     return jsonify([dict(p) for p in packages])
@@ -188,8 +248,7 @@ def get_archived_packages():
     db.close()
     
     return jsonify([dict(p) for p in packages])
-
-# Vision API for OCR
+# Local OCR using PaddleOCR (REPLACES OpenAI Vision API)
 @app.route('/api/process-image', methods=['POST'])
 def process_image():
     try:
@@ -200,53 +259,124 @@ def process_image():
         if 'base64,' in image_data:
             image_data = image_data.split('base64,')[1]
         
-        # Call OpenAI Vision API
-        response = openai.ChatCompletion.create(
-            model="gpt-4-vision-preview",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": "Extract the following information from this shipping label and return ONLY a valid JSON object with these exact keys: 'courier' (company name: Purolator/FedEx/UPS/Dragonfly), 'name' (recipient full name), 'tracking' (tracking number - for Purolator look for PIN number, for others look for tracking/waybill number), 'phone' (phone number if visible), 'postal' (postal code), 'address' (full street address including city and province). If any field cannot be found, use empty string ''. Do not include any explanation, only return the JSON object."},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
-                    ]
-                }
-            ],
-            max_tokens=300
-        )
+        # Decode base64 image
+        img_bytes = base64.b64decode(image_data)
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-        # Parse the response
-        result_text = response.choices[0].message.content
+        # Run PaddleOCR (fully local, no external API)
+        result = ocr.ocr(img, cls=True)
         
-        # Try to parse as JSON
-        try:
-            result = json.loads(result_text)
-        except:
-            return jsonify({'success': False, 'error': 'Failed to parse OCR result'})
+        # Extract all text from OCR results
+        extracted_text = []
+        if result and len(result) > 0:
+            for line in result[0]:
+                if line[1][0]:  # text content
+                    extracted_text.append(line[1][0])
         
-        # Normalize postal code and address for Elliot Lake
-        if 'postal' in result:
-            result['postal'] = normalize_postal_code(result.get('postal', ''))
-        if 'address' in result:
-            # Try to lookup customer in database
-            if 'name' in result and result.get('name'):
-                customer = lookup_customer(result['name'])
-                if customer:
-                    # Auto-fill missing data from customer database
-                    if not result.get('street') or not result.get('address'):
-                        result['street'] = customer.get('street', '')
-                        result['address'] = f"{customer['street']}, Elliot Lake, ON"
-                    if not result.get('postal'):
-                        result['postal'] = customer.get('postal', '')
-                    if not result.get('phone'):
-                        result['phone'] = customer.get('phone', '')
-            result['address'] = normalize_address(result.get('address', ''), result.get('postal', ''))
+        full_text = ' '.join(extracted_text)
         
-        return jsonify({'success': True, 'data': result})
-    
+        # Parse shipping label information
+        parsed_data = parse_shipping_label(full_text)
+        
+        # Try to lookup customer in database and fill in missing data
+        if parsed_data.get('name'):
+            customer = lookup_customer_by_name(parsed_data['name'])
+            if customer:
+                if not parsed_data.get('phone'):
+                    parsed_data['phone'] = customer.get('phone', '')
+                if not parsed_data.get('postal'):
+                    parsed_data['postal'] = customer.get('postal', '')
+                if not parsed_data.get('address'):
+                    parsed_data['address'] = f"{customer.get('street', '')}, {DEFAULT_CITY}, {DEFAULT_PROVINCE}"
+        
+        # Normalize postal code and address
+        if 'postal' in parsed_data:
+            parsed_data['postal'] = normalize_postal_code(parsed_data.get('postal', ''))
+        if 'address' in parsed_data:
+            parsed_data['address'] = normalize_address(parsed_data.get('address', ''), parsed_data.get('postal', ''))
+        
+        return jsonify({'success': True, 'data': parsed_data})
+        
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+def lookup_customer_by_name(name):
+    """Look up customer in database by name"""
+    try:
+        db = get_db()
+        customer = db.execute("SELECT * FROM customers WHERE LOWER(name) = LOWER(?)", (name,)).fetchone()
+        db.close()
+        if customer:
+            return dict(customer)
+    except:
+        pass
+    return None
+def parse_shipping_label(text):
+    """Parse shipping label text to extract courier, tracking, name, address, etc."""
+    result = {
+        'courier': '',
+        'name': '',
+        'tracking': '',
+        'phone': '',
+        'postal': '',
+        'address': ''
+    }
+    
+    text_upper = text.upper()
+    
+    # Detect courier
+    if 'PUROLATOR' in text_upper:
+        result['courier'] = 'Purolator'
+    elif 'FEDEX' in text_upper or 'FED EX' in text_upper:
+        result['courier'] = 'FedEx'
+    elif 'UPS' in text_upper:
+        result['courier'] = 'UPS'
+    elif 'CANADA POST' in text_upper or 'POSTES CANADA' in text_upper:
+        result['courier'] = 'Canada Post'
+    elif 'DRAGONFLY' in text_upper:
+        result['courier'] = 'Dragonfly'
+    
+    # Extract tracking number (various patterns)
+    tracking_patterns = [
+        r'\b[0-9]{12,}\b',  # Long numeric
+        r'\b[0-9]{4}\s?[0-9]{4}\s?[0-9]{4}\b',  # Groups of 4
+        r'\b[A-Z0-9]{10,}\b',  # Alphanumeric
+    ]
+    
+    for pattern in tracking_patterns:
+        match = re.search(pattern, text)
+        if match:
+            result['tracking'] = match.group(0).replace(' ', '')
+            break
+    
+    # Extract Canadian postal code
+    postal_match = re.search(r'\b[A-Z][0-9][A-Z]\s?[0-9][A-Z][0-9]\b', text_upper)
+    if postal_match:
+        result['postal'] = postal_match.group(0)
+    
+    # Extract phone number
+    phone_patterns = [
+        r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',
+        r'\(\d{3}\)\s?\d{3}[-.]?\d{4}',
+    ]
+    for pattern in phone_patterns:
+        match = re.search(pattern, text)
+        if match:
+            result['phone'] = match.group(0)
+            break
+    
+    # Extract name (look for lines that might be names)
+    lines = text.split('\n')
+    for line in lines:
+        line_stripped = line.strip()
+        if len(line_stripped) > 3 and len(line_stripped) < 50:
+            if sum(c.isalpha() for c in line_stripped) > len(line_stripped) * 0.6:
+                if not any(keyword in line_stripped.upper() for keyword in ['TRACKING', 'DELIVERY', 'SHIP', 'FROM', 'PUROLATOR', 'FEDEX', 'UPS']):
+                    result['name'] = line_stripped
+                    break
+    
+    return result
 @app.route('/api/packages/<int:package_id>/sign', methods=['POST'])
 def sign_package(package_id):
     data = request.json
@@ -254,9 +384,9 @@ def sign_package(package_id):
     
     db = get_db()
     db.execute('''UPDATE packages 
-                 SET signature_image = ?, status = 'signed', signed_at = CURRENT_TIMESTAMP
-                 WHERE id = ?''',
-              (signature, package_id))
+        SET signature_image = ?, status = 'signed', signed_at = CURRENT_TIMESTAMP
+        WHERE id = ?''',
+        (signature, package_id))
     db.commit()
     db.close()
     
@@ -278,11 +408,11 @@ def track_package(tracking_number):
     package = db.execute('''SELECT courier, name, tracking, status, created_at, signed_at 
         FROM packages WHERE tracking = ?''',
         (tracking_number,)).fetchone()
+    db.close()
     
     if package:
         return jsonify(dict(package))
     return jsonify({'error': 'Package not found'}), 404
-
 # User management APIs
 @app.route('/api/users', methods=['GET'])
 def get_users():
@@ -304,7 +434,7 @@ def create_user():
     try:
         db = get_db()
         db.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-                  (username, password_hash, role))
+                 (username, password_hash, role))
         db.commit()
         db.close()
         return jsonify({'success': True})
@@ -320,91 +450,123 @@ def reset_password(username):
     
     db = get_db()
     db.execute("UPDATE users SET password_hash = ? WHERE username = ?",
-              (password_hash, username))
+             (password_hash, username))
+    db.commit()
+    db.close()
+    
+    return jsonify({'success': True})
+# Customer Management APIs (NEW - replaces JSON file management)
+@app.route('/api/customers', methods=['GET'])
+def get_customers():
+    db = get_db()
+    customers = db.execute("SELECT * FROM customers ORDER BY name").fetchall()
+    db.close()
+    return jsonify({'addresses': [dict(c) for c in customers]})
+
+@app.route('/api/customers', methods=['POST'])
+def add_customer():
+    data = request.json
+    
+    db = get_db()
+    try:
+        cursor = db.execute('''INSERT INTO customers (name, phone, email, street, postal)
+                              VALUES (?, ?, ?, ?, ?)''',
+                           (data.get('name'), data.get('phone'), data.get('email'),
+                            data.get('street'), data.get('postal')))
+        db.commit()
+        customer_id = cursor.lastrowid
+        db.close()
+        return jsonify({'success': True, 'id': customer_id})
+    except sqlite3.IntegrityError:
+        db.close()
+        return jsonify({'success': False, 'message': 'Customer with this phone already exists'}), 400
+
+@app.route('/api/customers/<int:customer_id>', methods=['PUT'])
+def update_customer(customer_id):
+    data = request.json
+    
+    db = get_db()
+    db.execute('''UPDATE customers 
+                 SET name = ?, phone = ?, email = ?, street = ?, postal = ?
+                 WHERE id = ?''',
+              (data.get('name'), data.get('phone'), data.get('email'),
+               data.get('street'), data.get('postal'), customer_id))
     db.commit()
     db.close()
     
     return jsonify({'success': True})
 
-
-
-# Customer Management APIs
-@app.route('/api/customers', methods=['GET'])
-def get_customers():
-    try:
-        with open('addresses.json', 'r') as f:
-            data = json.load(f)
-        return jsonify(data)
-    except FileNotFoundError:
-        return jsonify({'addresses': []})
-
-@app.route('/api/customers', methods=['POST'])
-def add_customer():
-    data = request.json
-    try:
-        with open('addresses.json', 'r') as f:
-            customers = json.load(f)
-    except FileNotFoundError:
-        customers = {'addresses': []}
-    
-    customers['addresses'].append(data)
-    
-    with open('addresses.json', 'w') as f:
-        json.dump(customers, f, indent=2)
+@app.route('/api/customers/<int:customer_id>', methods=['DELETE'])
+def delete_customer(customer_id):
+    db = get_db()
+    db.execute("DELETE FROM customers WHERE id = ?", (customer_id,))
+    db.commit()
+    db.close()
     
     return jsonify({'success': True})
 
-@app.route('/api/customers/<int:index>', methods=['PUT'])
-def update_customer(index):
+# NEW: Get all packages for a specific customer
+@app.route('/api/customers/<int:customer_id>/packages', methods=['GET'])
+def get_customer_packages(customer_id):
+    status = request.args.get('status', 'pending')
+    
+    db = get_db()
+    packages = db.execute('''SELECT * FROM packages 
+                            WHERE customer_id = ? AND status = ?
+                            ORDER BY created_at DESC''',
+                         (customer_id, status)).fetchall()
+    db.close()
+    
+    return jsonify([dict(p) for p in packages])
+# NEW: Bulk pickup - process multiple packages at once for a customer
+@app.route('/api/pickups/bulk', methods=['POST'])
+def bulk_pickup():
     data = request.json
-    with open('addresses.json', 'r') as f:
-        customers = json.load(f)
+    package_ids = data.get('package_ids', [])
+    customer_id = data.get('customer_id')
+    pickup_name = data.get('pickup_name', '')
+    pickup_id_type = data.get('pickup_id_type', '')
+    pickup_id_number = data.get('pickup_id_number', '')
+    pickup_signature = data.get('pickup_signature', '')
     
-    if 0 <= index < len(customers['addresses']):
-        customers['addresses'][index] = data
-        with open('addresses.json', 'w') as f:
-            json.dump(customers, f, indent=2)
-        return jsonify({'success': True})
-    return jsonify({'success': False}), 404
-
-@app.route('/api/customers/<int:index>', methods=['DELETE'])
-def delete_customer(index):
-    with open('addresses.json', 'r') as f:
-        customers = json.load(f)
+    if not package_ids:
+        return jsonify({'success': False, 'message': 'No packages selected'}), 400
     
-    if 0 <= index < len(customers['addresses']):
-        customers['addresses'].pop(index)
-        with open('addresses.json', 'w') as f:
-            json.dump(customers, f, indent=2)
-        return jsonify({'success': True})
-    return jsonify({'success': False}), 404
+    db = get_db()
+    
+    # Create a pickup record
+    cursor = db.execute('''INSERT INTO pickups 
+                          (customer_id, pickup_name, pickup_id_type, pickup_id_number, pickup_signature)
+                          VALUES (?, ?, ?, ?, ?)''',
+                       (customer_id, pickup_name, pickup_id_type, pickup_id_number, pickup_signature))
+    pickup_id = cursor.lastrowid
+    
+    # Update all packages in this pickup
+    placeholders = ','.join('?' * len(package_ids))
+    db.execute(f'''UPDATE packages 
+                  SET status = 'signed', 
+                      signed_at = CURRENT_TIMESTAMP,
+                      signature_image = ?
+                  WHERE id IN ({placeholders})''',
+              [pickup_signature] + package_ids)
+    
+    db.commit()
+    db.close()
+    
+    return jsonify({'success': True, 'pickup_id': pickup_id, 'packages_updated': len(package_ids)})
 
-# Customer lookup helper
-def lookup_customer(name):
-    try:
-        with open('addresses.json', 'r') as f:
-            customers = json.load(f)
-        for customer in customers.get('addresses', []):
-            if customer['name'].lower() == name.lower():
-                return customer
-    except:
-        pass
-    return None
+# NEW: Get pickup history
+@app.route('/api/pickups', methods=['GET'])
+def get_pickups():
+    db = get_db()
+    pickups = db.execute('''SELECT p.*, c.name as customer_name 
+                           FROM pickups p
+                           LEFT JOIN customers c ON p.customer_id = c.id
+                           ORDER BY p.timestamp DESC
+                           LIMIT 100''').fetchall()
+    db.close()
+    
+    return jsonify([dict(p) for p in pickups])
 if __name__ == '__main__':
     init_db()
-    app.run(host='0.0.0.0', port=5000, debug=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    app.run(host='127.0.0.1', port=5000, debug=True)
