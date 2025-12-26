@@ -1,6 +1,5 @@
 let pendingPackages = [], currentBatchPackages = [];
-const TEST_MODE = false;
-const API_URL = 'http://localhost:5000/api';  // Update this to your server URL when deployed
+const API_URL = 'http://localhost:5000/api'; // Update this to your server URL when deployed
 
 async function processImages() {
     try {
@@ -14,53 +13,78 @@ async function processImages() {
         for (let i = 0; i < files.length; i++) {
             const f = files[i];
             
-            // Convert image to base64 for storage
+            // Convert image to base64 for storage and processing
             const reader = new FileReader();
             const imageData = await new Promise((resolve) => {
                 reader.onload = (e) => resolve(e.target.result);
                 reader.readAsDataURL(f);
             });
             
-            if (TEST_MODE) {
-                const pkg = {
-                    id: Date.now() + Math.random(),
-                    courier,
-                    name: 'Test Customer',
-                    tracking: 'TEST' + Math.floor(Math.random() * 1000000000),
-                    phone: '705-123-4567',
-                    postal: 'P5A 1M1',
-                    labelImage: imageData,
-                    missingFields: []
-                };
-                pendingPackages.push(pkg);
-                continue;
-            }
+            document.getElementById('processing').innerHTML = '⏳ ' + (i + 1) + '/' + files.length + ': ' + f.name + '...';
             
-            // REAL MODE - Use Tesseract OCR
             try {
-                if (typeof Tesseract === 'undefined') throw new Error('Tesseract not loaded');
+                // Send to server for PaddleOCR processing
+                const response = await fetch(`${API_URL}/process`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image: imageData,
+                        courier: courier
+                    })
+                });
                 
-                document.getElementById('processing').innerHTML = '⏳ ' + (i + 1) + '/' + files.length + ': ' + f.name + '...';
+                if (!response.ok) throw new Error('Server processing failed');
                 
-                const worker = await Tesseract.createWorker('eng');
-                const { data } = await worker.recognize(f);
-                const text = data.text;
-                await worker.terminate();
+                const result = await response.json();
+let pendingPackages = [], currentBatchPackages = [];
+const API_URL = 'http://localhost:5000/api';
+
+async function processImages() {
+    try {
+        const files = document.getElementById('labelImages').files;
+        if (!files.length) return alert('❌ Select images');
+        
+        const courier = document.getElementById('courier').value;
+        document.getElementById('processing').innerHTML = '⏳ Processing...';
+        pendingPackages = [];
+        
+        for (let i = 0; i < files.length; i++) {
+            const f = files[i];
+            
+            // Convert image to base64
+            const reader = new FileReader();
+            const imageData = await new Promise((resolve) => {
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(f);
+            });
+            
+            document.getElementById('processing').innerHTML = '⏳ ' + (i + 1) + '/' + files.length + ': ' + f.name + '...';
+            
+            try {
+                // Send to server for PaddleOCR processing
+                const response = await fetch(`${API_URL}/process`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image: imageData,
+                        courier: courier
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Server processing failed');
+                
+                const result = await response.json();
                 
                 const pkg = {
                     id: Date.now() + Math.random(),
                     courier,
-                    name: text.match(/([A-Z][a-z]+ [A-Z][a-z]+)/)?.[1] || '',
-                    tracking: text.match(/\b[A-Z0-9]{10,}\b/)?.[0] || '',
-                    phone: text.match(/(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/)?.[0] || '',
-                    postal: text.match(/P5A\s*[12][A-Z0-9][0-9]/i)?.[0] || '',
+                    name: result.name || '',
+                    tracking: result.tracking || '',
+                    phone: result.phone || '',
+                    postal: result.postal || '',
                     labelImage: imageData,
-                    missingFields: []
+                    missingFields: result.missing_fields || []
                 };
-                
-                if (!pkg.name) pkg.missingFields.push('Name');
-                if (!pkg.tracking) pkg.missingFields.push('Tracking');
-                if (!pkg.postal) pkg.missingFields.push('Postal');
                 
                 pendingPackages.push(pkg);
             } catch (err) {
@@ -126,7 +150,6 @@ async function savePackageFromForm(i) {
     }
     
     try {
-        // Save to backend
         const response = await fetch(`${API_URL}/packages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -229,4 +252,3 @@ async function filterPackages() {
         alert('❌ Error searching packages');
     }
 }
-
