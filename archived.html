@@ -15,9 +15,38 @@
     </div>
     
     <div class="section card">
-        <h3>Search Archived</h3>
+                <div style="margin-bottom: 15px;">
+            <button onclick="viewAllArchived()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-right: 10px;">📋 View All</button>
+        </div>
+        
+        <h3>Search Archives</h3>
         <input type="text" id="archiveFilter" placeholder="Search...">
         <button onclick="loadArchived()">📋 Load</button>
+                
+        <div style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+            <h4 style="margin: 0 0 10px 0;">🔍 Filters</h4>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div>
+                    <label>Customer:</label>
+                    <input type="text" id="filterCustomer" placeholder="Customer name" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                </div>
+                <div>
+                    <label>Tracking #:</label>
+                    <input type="text" id="filterTracking" placeholder="Tracking number" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                </div>
+                <div>
+                    <label>Status:</label>
+                    <select id="filterStatus" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">All Statuses</option>
+                        <option value="Sent Back">Sent Back</option>
+                        <option value="Picked Up">Picked Up</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                    <button onclick="applyFilters()" style="padding: 6px 15px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply Filters</button>
+                </div>
+            </div>
+        </div>
         <div id="archiveList" class="scrollable"></div>
     </div>
 
@@ -25,4 +54,5 @@
     <script src="archive.js"></script>
 </body>
 </html>
+
 
