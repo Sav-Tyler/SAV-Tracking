@@ -53,3 +53,43 @@ function displayArchivedPackages(packages) {
     
     container.innerHTML = html;
 }
+
+// Global variable to store all archived packages for filtering
+let allArchivedPackages = [];
+
+// View All Archived Packages
+async function viewAllArchived() {
+    try {
+        const response = await fetch(`${API_URL}/packages/archived/all`);
+        const packages = await response.json();
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch all archived packages');
+        }
+        
+        allArchivedPackages = packages; // Store for filtering
+        displayArchivedPackages(packages);
+    } catch (error) {
+        console.error('Error loading all archived packages:', error);
+        document.getElementById('archiveList').innerHTML = 
+            '<div class="error-message">❌ Error loading archived packages. Please try again.</div>';
+    }
+}
+
+// Apply Filters
+function applyFilters() {
+    const customerFilter = document.getElementById('filterCustomer').value.toLowerCase();
+    const trackingFilter = document.getElementById('filterTracking').value.toLowerCase();
+    const statusFilter = document.getElementById('filterStatus').value;
+    
+    let filtered = allArchivedPackages.filter(pkg => {
+        const matchCustomer = !customerFilter || pkg.name.toLowerCase().includes(customerFilter);
+        const matchTracking = !trackingFilter || pkg.tracking.toLowerCase().includes(trackingFilter);
+        const matchStatus = !statusFilter || pkg.status === statusFilter;
+        
+        return matchCustomer && matchTracking && matchStatus;
+    });
+    
+    displayArchivedPackages(filtered);
+}
+
