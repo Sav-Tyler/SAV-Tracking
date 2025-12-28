@@ -17,7 +17,7 @@ app = Flask(__name__, static_folder='.')
 CORS(app)
 
 # Initialize PaddleOCR (runs locally, no external API calls)
-ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False)
+ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=True)
 
 # Database file
 DATABASE = 'packages.db'
@@ -738,4 +738,5 @@ def call_bulk_customers():
 if __name__ == '__main__':
     init_db()
     app.run(host='127.0.0.1', port=5000, debug=True)
+
 
