@@ -297,45 +297,7 @@ def get_archived_packages():
     return jsonify([dict(p) for p in packages])
 
 @app.route('/api/process-image', methods=['POST'])
-
-# Helper function to extract text from color-coded regions for Intelecom/Dragonfly labels
-def extract_region_by_color(img, lower_color, upper_color):
-        """Extract text from a specific color region in the image."""
-        try:
-                    # Create mask for the color range
-                    mask = cv2.inRange(img, lower_color, upper_color)
-
-        # Find contours of the colored regions
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        if not contours:
-                        return ""
-
-        # Get the largest contour
-        largest_contour = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(largest_contour)
-
-        # Crop the region
-        region = img[y:y+h, x:x+w]
-
-        # Convert to grayscale for OCR
-        gray_region = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
-
-        # Run OCR on the cropped region
-        result = ocr.ocr(gray_region, cls=True)
-
-        # Extract text from OCR result
-        text = ""
-        if result and len(result) > 0:
-                        for line in result[0]:
-                                            if line[1]:
-                                                                    text += line[1][0] + " "
-
-        return text.strip()
-    except Exception as e:
-        return ""
-
-():
+def process_image():
     try:
         data = request.json
         image_data = data.get('image', '')
