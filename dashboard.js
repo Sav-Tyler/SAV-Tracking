@@ -251,4 +251,69 @@ async function filterPackages() {
         console.error('Search error:', err);
         alert('❌ Error searching packages');
     }
+
+
+// Load 5-Day Ready Packages
+async function load5DayPackages() {
+    try {
+        const response = await fetch(`${API_URL}/packages/ready-5days`);
+        const packages = await response.json();
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch 5-day packages');
+        }
+        
+        if (packages.length > 0) {
+            document.getElementById('fiveDaySection').style.display = 'block';
+            displayFiveDayPackages(packages);
+        } else {
+            document.getElementById('fiveDaySection').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error loading 5-day packages:', error);
+    }
 }
+
+// Display 5-Day Packages
+function displayFiveDayPackages(packages) {
+    const listDiv = document.getElementById('fiveDayPackageList');
+    listDiv.innerHTML = packages.map(pkg => `
+        <div class="package-card" style="margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <input type="checkbox" class="five-day-checkbox" data-id="${pkg.id}" style="margin-right: 10px;" />
+            <strong>${pkg.tracking}</strong> - ${pkg.name} (Ready since: ${new Date(pkg.ready_date).toLocaleDateString()})
+        </div>
+    `).join('');
+}
+
+// Mark Selected as Sent Back
+async function markSelectedAsSentBack() {
+    const checkboxes = document.querySelectorAll('.five-day-checkbox:checked');
+    const packageIds = Array.from(checkboxes).map(cb => cb.dataset.id);
+    
+    if (packageIds.length === 0) {
+        alert('Please select at least one package to mark as sent back.');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/packages/bulk-sent-back`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ package_ids: packageIds })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to mark packages as sent back');
+        }
+        
+        alert(`${packageIds.length} package(s) marked as sent back.`);
+        load5DayPackages(); // Reload the list
+    } catch (error) {
+        console.error('Error marking packages as sent back:', error);
+        alert('❌ Error marking packages as sent back.');
+    }
+}
+
+// Load 5-day packages on page load
+load5DayPackages();}
+
