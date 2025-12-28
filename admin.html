@@ -46,7 +46,45 @@
         </div>
     </div>
 
+        <div class="admin-only card">
+        <h3>📢 Grandstream Integration Settings</h3>
+        
+        <div class="card">
+            <h4>📞 UCM6302A Configuration</h4>
+            <p style="color: #666; margin-bottom: 15px;">Configure your Grandstream UCM6302A for automatic customer calling after package processing.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div>
+                    <label>UCM6302A IP Address:</label>
+                    <input type="text" id="grandstreamIP" placeholder="e.g., 192.168.1.100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                </div>
+                <div>
+                    <label>Extension/Line:</label>
+                    <input type="text" id="grandstreamExt" placeholder="e.g., 1001" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                </div>
+                <div>
+                    <label>API Username:</label>
+                    <input type="text" id="grandstreamUser" placeholder="API username" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                </div>
+                <div>
+                    <label>API Password:</label>
+                    <input type="password" id="grandstreamPass" placeholder="API password" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                </div>
+                <div>
+                    <label>Recorded Message ID:</label>
+                    <input type="text" id="grandstreamMsgID" placeholder="Message ID for pickup notification" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button onclick="saveGrandstreamSettings()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">💾 Save Settings</button>
+                <button onclick="testGrandstreamConnection()" style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">🔌 Test Connection</button>
+            </div>
+        </div>
+    </div>
+
     <script src="common.js"></script>
     <script src="admin.js"></script>
 </body>
 </html>
+
