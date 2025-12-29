@@ -212,9 +212,16 @@
     </style>
 </head>
 <body>
-        <div style="max-width: 900px; width: 90%; margin: 0 auto;">
-    <!-- Company Logo -->
-    <div style="text-align: center; padding: 20px 0; margin: 0 auto; max-width: 900px; width: 90%;">        <img src="company-logo.png" alt="Superior Audio & Video" style="max-width: 100%; height: auto;">    <div class="main-container">
+    <div style="max-width: 900px; width: 90%; margin: 0 auto;">
+
+      <div class="logo-container">
+        <img id="companyLogo" src="default-logo.png" alt="Company Logo">
+      </div>
+      <div class="index-tagline" id="indexTagline">
+        Track your packages with Superior Audio & Video
+      </div>
+
+      <div class="main-container">
         <div class="header">
             <div class="staff-menu">
                 <button class="staff-btn" onclick="openStaffLogin()">👤 Staff Login</button>
@@ -232,25 +239,31 @@
     </div>
 
     <!-- Staff Login Modal -->
-    <div id="staffModal" class="modal">
+    <div id="staffModal" class="modal hidden">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2>🔐 Staff Login</h2>
-                <button class="close-btn" onclick="closeStaffLogin()">×</button>
+            <button type="button" class="modal-close" onclick="closeStaffLogin()">×</button>
+            <div class="login-header">
+                <span class="login-lock-icon">🔒</span>
+                <span class="login-title">Staff Login</span>
             </div>
+
             <div class="form-group">
                 <label>Username</label>
                 <input type="text" id="staffUsername" placeholder="Enter username">
             </div>
+
             <div class="form-group">
                 <label>Password</label>
-                <div style="position: relative;">
-                    <input type="password" id="staffPassword" placeholder="Enter password" style="padding-right: 45px;">
-                    <button type="button" onclick="togglePassword()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2em;" title="Show/Hide Password">👁️</button>
-                </div>            </div>
+                <div class="password-row">
+                    <input type="password" id="staffPassword" placeholder="Enter password">
+                    <button type="button" class="show-password-btn" onclick="togglePassword()" title="Show/Hide Password">👁️</button>
+                </div>
+            </div>
+
             <button class="login-btn" onclick="staffLogin()">Login</button>
         </div>
     </div>
+
 
     <script>
         const API_URL = 'http://localhost:5000/api';
@@ -295,15 +308,7 @@
         document.getElementById('trackingInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') trackPackage();
         });
-
-        function openStaffLogin() {
-            document.getElementById('staffModal').classList.add('active');
-        }
-
-        function closeStaffLogin() {
-            document.getElementById('staffModal').classList.remove('active');
-        }
-
+      
         async function staffLogin() {
             const username = document.getElementById('staffUsername').value;
             const password = document.getElementById('staffPassword').value;
@@ -352,12 +357,47 @@
         }
     }
     </script>
+</div>
+    <script src="auth.js"></script>
+    <script>
+      async function loadPublicSettings() {
+        try {
+          const res = await fetch('/api/settings');
+          const settings = await res.json();
+
+          const logo = document.getElementById('companyLogo');
+          if (settings.logo_url && logo) {
+            logo.src = settings.logo_url;
+          }
+
+          const taglineEl = document.getElementById('indexTagline');
+          if (settings.tagline && taglineEl) {
+            taglineEl.textContent = settings.tagline;
+          }
+        } catch (e) {
+          console.error('Failed to load settings', e);
+        }
+      }
+
+      function openStaffLogin() {
+        const modal = document.getElementById('staffModal');
+        if (modal) modal.classList.remove('hidden');
+      }
+
+      function closeStaffLogin() {
+        const modal = document.getElementById('staffModal');
+        if (modal) modal.classList.add('hidden');
+      }
+
+      document.addEventListener('DOMContentLoaded', loadPublicSettings);
+    </script>
 </body>
 </html>
 
 
 
-    </div>
+
+ 
 
 
 

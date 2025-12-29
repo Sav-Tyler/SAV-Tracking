@@ -64,3 +64,91 @@ input[type="file"] { padding: 12px; background: #f8f9fa; border: 2px dashed #dee
     border-radius: 50%; animation: spin 1s linear infinite;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+/* Login modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.4);
+  z-index: 1000;
+}
+
+.modal-content {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px 24px 32px 24px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: #d9534f;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.login-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.login-title {
+  font-weight: 600;
+}
+
+.password-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.password-row input {
+  flex: 1;
+  margin: 10px 0;
+}
+
+.show-password-btn {
+  width: auto;
+  padding: 10px 12px;
+  margin: 0;
+  background: #e9ecef;
+  border-radius: 8px;
+  border: 1px solid #ced4da;
+  cursor: pointer;
+}
+
+/* Branding */
+.logo-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.logo-container img {
+  max-width: 400px;
+  width: 100%;
+  height: auto;
+}
+
+.index-tagline {
+  text-align: center;
+  font-size: 1.1em;
+  margin-bottom: 20px;
+}

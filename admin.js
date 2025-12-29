@@ -58,3 +58,43 @@ function renderUserList() {
 }
 
 renderUserList();
+
+async function loadBranding() {
+    try {
+        const res = await fetch('/api/settings');
+        const settings = await res.json();
+        const logoInput = document.getElementById('logoUrlInput');
+        const taglineInput = document.getElementById('taglineInput');
+        if (logoInput) logoInput.value = settings.logo_url || '';
+        if (taglineInput) taglineInput.value = settings.tagline || '';
+    } catch (e) {
+        console.error('Failed to load branding', e);
+    }
+}
+
+async function saveBranding() {
+    const logoEl = document.getElementById('logoUrlInput');
+    const taglineEl = document.getElementById('taglineInput');
+    const logoUrl = logoEl ? logoEl.value.trim() : '';
+    const tagline = taglineEl ? taglineEl.value.trim() : '';
+
+    try {
+        await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ logo_url: logoUrl, tagline })
+        });
+        alert('Branding updated');
+    } catch (e) {
+        console.error('Failed to save branding', e);
+        alert('Error saving branding');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Ensure user list still loads
+    renderUserList();
+    // Load branding fields
+    loadBranding();
+});
+

@@ -71,3 +71,9 @@ function showLogin() {
 
 // Initialize
 initDefaultAdmin();
+
+function togglePassword() {
+    const input = document.getElementById('staffPassword');
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+}

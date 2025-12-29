@@ -530,11 +530,18 @@
                 </div>
             </div>
         </div>
+        </div>
     </div>
 
-        "></script>
+    <!-- Shipping Summary Section -->
+    <div id="shippingSummary" class="section-card" style="margin: 20px;">
+        <h2>Shipping Summary</h2>
+        <div id="shippingSummaryContent"></div>
+    </div>
+
     <script src="dashboard.js"></script>
     <script>
+
         // Check authentication
         const currentUser = sessionStorage.getItem('currentUser');
         const userRole = sessionStorage.getItem('userRole');
@@ -769,9 +776,47 @@
             }
         }
 
-        function useScriptelPad() {
+                function useScriptelPad() {
             alert('Scripttel Signature Pad Integration\n\nTo integrate with Scripttel signature pad:\n\n1. Install Scripttel SDK\n2. Connect pad via USB\n3. Use Scripttel API to capture signature\n\nContact your IT administrator for setup assistance.');
         }
+
+        // Shipping summary
+        async function loadShippingSummary() {
+            try {
+                const res = await fetch('/api/reports/shipping-summary');
+                if (!res.ok) throw new Error('Failed to fetch summary');
+                const data = await res.json();
+
+                const container = document.getElementById('shippingSummary');
+                const content = document.getElementById('shippingSummaryContent');
+                if (!container || !content) return;
+
+                let html = '<table style="width:100%; border-collapse: collapse;">';
+                html += '<tr><th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Shipping Company</th>' +
+                        '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Small (&lt;10 lbs)</th>' +
+                        '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Large (&ge;10 lbs)</th>' +
+                        '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Total</th></tr>';
+
+                Object.keys(data).forEach(company => {
+                    const s = data[company];
+                    html += `<tr>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${company}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${s.small}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${s.large}</td>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">${s.total}</td>
+                    </tr>`;
+                });
+
+                html += '</table>';
+                content.innerHTML = html;
+            } catch (e) {
+                console.error('Failed to load shipping summary', e);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadShippingSummary();
+        });
 
         // Mobile camera capture
         function openCamera() {
@@ -779,6 +824,10 @@
             input.setAttribute('capture', 'environment');
             input.click();
         }
+    </script>
+</body>
+</html>
+
     </script>
 </body>
 </html>

@@ -46,7 +46,7 @@
         </div>
     </div>
 
-        <div class="admin-only card">
+    <div class="admin-only card">
         <h3>📢 Grandstream Integration Settings</h3>
         
         <div class="card">
@@ -83,8 +83,26 @@
         </div>
     </div>
 
+    <!-- Branding Settings -->
+    <div class="admin-only card">
+        <h3>Branding Settings</h3>
+
+        <div class="form-group">
+            <label for="logoUrlInput">Company Logo URL (PNG/JPEG, max 400px wide)</label>
+            <input type="text" id="logoUrlInput" placeholder="https://.../logo.png">
+        </div>
+
+        <div class="form-group">
+            <label for="taglineInput">Homepage Tagline</label>
+            <input type="text" id="taglineInput" placeholder="Track your packages with ...">
+        </div>
+
+        <button onclick="saveBranding()">Save Branding</button>
+    </div>
+
     <script src="common.js"></script>
     <script src="admin.js"></script>
 </body>
 </html>
+
 
