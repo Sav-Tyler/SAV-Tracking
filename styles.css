@@ -1,3 +1,47 @@
+:root {
+    --index-text-color: #111827;
+    --index-header-bg: #0891b2;
+    --index-page-bg: #4f46e5;
+    --index-tracking-bg: #ffffff;
+    --index-staff-bar-bg: #0891b2;
+}
+
+body.index-page {
+    background: var(--index-page-bg);
+    color: var(--index-text-color);
+}
+
+.hero-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 40px;
+}
+
+.tracking-card {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto 40px auto;
+    background: var(--index-tracking-bg);
+    color: var(--index-text-color);
+    border-radius: 20px;
+}
+
+.tracking-header {
+    background: var(--index-header-bg);
+    color: var(--index-text-color);
+}
+
+.staff-bar {
+    background: var(--index-staff-bar-bg);
+}
+
+.tracking-title,
+.tracking-subtitle {
+    color: var(--index-text-color);
+}
+
 * { box-sizing: border-box; }
 body { 
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 

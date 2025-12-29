@@ -31,15 +31,12 @@ function doLogin() {
     const found = users.find(u => u.username === username && u.password === password);
 
     if (found) {
-        localStorage.setItem('currentUser', JSON.stringify({
-            username: found.username,
-            role: found.role,
-            id: found.id
-        }));
-        window.location.href = 'dashboard.html';
-    } else {
-        alert('❌ Invalid credentials');
-    }
+    sessionStorage.setItem('currentUser', found.username);
+    sessionStorage.setItem('userRole', found.role);
+    sessionStorage.setItem('userId', String(found.id));
+    window.location.href = 'dashboard.html';
+} else {
+    alert('❌ Invalid credentials');
 }
 
 // Staff login from modal on index.html
@@ -52,16 +49,14 @@ function staffLogin() {
     const users = getUsers();
     const found = users.find(u => u.username === username && u.password === password);
 
-    if (found) {
-        localStorage.setItem('currentUser', JSON.stringify({
-            username: found.username,
-            role: found.role,
-            id: found.id
-        }));
-        window.location.href = 'dashboard.html';
-    } else {
-        alert('❌ Invalid credentials');
-    }
+if (found) {
+    sessionStorage.setItem('currentUser', found.username);
+    sessionStorage.setItem('userRole', found.role);
+    sessionStorage.setItem('userId', String(found.id));
+    window.location.href = 'dashboard.html';
+} else {
+    alert('❌ Invalid credentials');
+}
 }
 
 // Public tracking

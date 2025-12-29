@@ -211,25 +211,26 @@
         }
     </style>
 </head>
-<body>
-    <div style="max-width: 900px; width: 90%; margin: 0 auto;">
+<body class="index-page">
+   <div class="hero-wrapper">
+    <img id="companyLogo" src="default-logo.png" alt="Company Logo" style="max-width:400px; height:auto;">
 
-      <div class="logo-container">
-        <img id="companyLogo" src="default-logo.png" alt="Company Logo">
-      </div>
-      <div class="index-tagline" id="indexTagline">
+    <p id="indexTagline" style="margin:0; font-size:1rem; text-align:center;">
         Track your packages with Superior Audio & Video
-      </div>
+    </p>
 
-      <div class="main-container">
-        <div class="header">
-            <div class="staff-menu">
-                <button class="staff-btn" onclick="openStaffLogin()">👤 Staff Login</button>
+    <div class="tracking-card">
+        <!-- keep all existing card content inside, just ensure the top bar has tracking-header + staff-bar classes -->
+        <div class="tracking-header">
+            <div class="staff-bar">
+                <!-- your existing Staff Login row/button here -->
             </div>
-            <h1>📦 Package Tracking</h1>
-            <p>Track your packages with Superior Audio & Video</p>
+            <!-- existing "📦 Package Tracking" title and subtitle with class="tracking-title"/"tracking-subtitle" -->
         </div>
-        
+
+        <!-- tracking input, button, etc. -->
+    </div>
+</div>   
         <div class="tracking-section">
             <h2>Track Your Package</h2>
             <input type="text" id="trackingInput" class="tracking-input" placeholder="Enter your tracking number..." />
@@ -239,7 +240,7 @@
     </div>
 
     <!-- Staff Login Modal -->
-    <div id="staffModal" class="modal hidden">
+    <div id="staffModal" class="modal">
         <div class="modal-content">
             <button type="button" class="modal-close" onclick="closeStaffLogin()">×</button>
             <div class="login-header">
@@ -358,36 +359,52 @@
     }
     </script>
 </div>
-    <script src="auth.js"></script>
-    <script>
-      async function loadPublicSettings() {
-        try {
-          const res = await fetch('/api/settings');
-          const settings = await res.json();
+<script src="auth.js"></script>
+<script>
+  async function loadPublicSettings() {
+    try {
+      const res = await fetch('/api/settings');
+      const settings = await res.json();
 
-          const logo = document.getElementById('companyLogo');
-          if (settings.logo_url && logo) {
-            logo.src = settings.logo_url;
-          }
-
-          const taglineEl = document.getElementById('indexTagline');
-          if (settings.tagline && taglineEl) {
-            taglineEl.textContent = settings.tagline;
-          }
-        } catch (e) {
-          console.error('Failed to load settings', e);
-        }
+      const logo = document.getElementById('companyLogo');
+      if (settings.logo_url && logo) {
+        logo.src = settings.logo_url;
       }
 
-      function openStaffLogin() {
-        const modal = document.getElementById('staffModal');
-        if (modal) modal.classList.remove('hidden');
+      const taglineEl = document.getElementById('indexTagline');
+      if (settings.tagline && taglineEl) {
+        taglineEl.textContent = settings.tagline;
       }
 
+      const root = document.documentElement;
+      if (settings.text_color) {
+        root.style.setProperty('--index-text-color', settings.text_color);
+      }
+      if (settings.header_bg_color) {
+        root.style.setProperty('--index-header-bg', settings.header_bg_color);
+      }
+      if (settings.page_bg_color) {
+        root.style.setProperty('--index-page-bg', settings.page_bg_color);
+      }
+      if (settings.tracking_bg_color) {
+        root.style.setProperty('--index-tracking-bg', settings.tracking_bg_color);
+      }
+      if (settings.staff_bar_bg_color) {
+        root.style.setProperty('--index-staff-bar-bg', settings.staff_bar_bg_color);
+      }
+    } catch (e) {
+      console.error('Failed to load settings', e);
+    }
+  }
+
+	  function openStaffLogin() {
+       const modal = document.getElementById('staffModal');
+       if (modal) modal.classList.add('active');
+}
       function closeStaffLogin() {
-        const modal = document.getElementById('staffModal');
-        if (modal) modal.classList.add('hidden');
-      }
+       const modal = document.getElementById('staffModal');
+       if (modal) modal.classList.remove('active');
+}
 
       document.addEventListener('DOMContentLoaded', loadPublicSettings);
     </script>

@@ -30,14 +30,7 @@
                     <option value="admin">Admin</option>
                 </select>
                 <button onclick="createUser()">💾 Save</button>
-            </div>
-            
-            <div class="card">
-                <h4>🔑 Reset Password</h4>
-                <input type="text" id="resetUsername" placeholder="Username">
-                <input type="password" id="resetPassword" placeholder="New Password">
-                <button onclick="resetPassword()">🔄 Reset</button>
-            </div>
+            </div>          
         </div>
         
         <div class="card">
@@ -83,22 +76,31 @@
         </div>
     </div>
 
-    <!-- Branding Settings -->
-    <div class="admin-only card">
-        <h3>Branding Settings</h3>
+<!-- Branding Settings -->
+			<div class="admin-only card">
+			<h3>Branding Settings</h3>
 
-        <div class="form-group">
-            <label for="logoUrlInput">Company Logo URL (PNG/JPEG, max 400px wide)</label>
-            <input type="text" id="logoUrlInput" placeholder="https://.../logo.png">
-        </div>
+			<div class="form-group">
+			<label for="logoFileInput">Company Logo (PNG/JPEG, max 400px wide)</label>
+			<input type="file" id="logoFileInput" accept="image/png,image/jpeg">
+			<small style="color:#666; display:block; margin-top:4px;">
+            Choose a logo from this computer. It will be stored in the app and shown on the public page.
+			</small>
+			<div style="margin-top:10px;">
+            <img id="logoPreview" src="" alt="Logo preview" style="max-width:200px; max-height:80px; display:none; border:1px solid #eee; padding:4px; border-radius:4px;">
+			</div>
+		</div>
 
-        <div class="form-group">
-            <label for="taglineInput">Homepage Tagline</label>
-            <input type="text" id="taglineInput" placeholder="Track your packages with ...">
-        </div>
-
-        <button onclick="saveBranding()">Save Branding</button>
+    <div class="form-group">
+        <label for="taglineInput">Homepage Tagline</label>
+        <input type="text" id="taglineInput" placeholder="Track your packages with ...">
     </div>
+
+    <button onclick="saveBranding()" style="width:100%; padding:10px 0; border:none; border-radius:6px; background:#0369a1; color:#fff; font-weight:600; cursor:pointer;">
+        Save Branding
+    </button>
+</div>
+
 
     <script src="common.js"></script>
     <script src="admin.js"></script>

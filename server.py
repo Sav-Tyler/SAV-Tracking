@@ -796,12 +796,31 @@ def get_settings():
 @app.route('/api/settings', methods=['POST'])
 def update_settings():
     data = request.json
+
     logo_url = data.get('logo_url')
     tagline = data.get('tagline')
+
+    text_color = data.get('text_color')
+    header_bg_color = data.get('header_bg_color')
+    page_bg_color = data.get('page_bg_color')
+    tracking_bg_color = data.get('tracking_bg_color')
+    staff_bar_bg_color = data.get('staff_bar_bg_color')
+
     if logo_url is not None:
         set_setting('logo_url', logo_url)
     if tagline is not None:
         set_setting('tagline', tagline)
+    if text_color is not None:
+        set_setting('text_color', text_color)
+    if header_bg_color is not None:
+        set_setting('header_bg_color', header_bg_color)
+    if page_bg_color is not None:
+        set_setting('page_bg_color', page_bg_color)
+    if tracking_bg_color is not None:
+        set_setting('tracking_bg_color', tracking_bg_color)
+    if staff_bar_bg_color is not None:
+        set_setting('staff_bar_bg_color', staff_bar_bg_color)
+
     return jsonify({'success': True})
 
 
