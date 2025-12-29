@@ -13,14 +13,42 @@ function initDefaultAdmin() {
 }
 
 // Storage functions
-function getUsers() { return JSON.parse(localStorage.getItem('users') || '[]'); }
-function saveUsers(users) { localStorage.setItem('users', JSON.stringify(users)); }
-function getPackages() { return JSON.parse(localStorage.getItem('packages') || '[]'); }
+function getUsers() {
+    return JSON.parse(localStorage.getItem('users') || '[]');
+}
+function saveUsers(users) {
+    localStorage.setItem('users', JSON.stringify(users));
+}
+function getPackages() {
+    return JSON.parse(localStorage.getItem('packages') || '[]');
+}
 
-// Login function
+// Login function (old inline login form, if still used)
 function doLogin() {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value;
+    const username = document.getElementById('username')?.value.trim() || '';
+    const password = document.getElementById('password')?.value || '';
+    const users = getUsers();
+    const found = users.find(u => u.username === username && u.password === password);
+
+    if (found) {
+        localStorage.setItem('currentUser', JSON.stringify({
+            username: found.username,
+            role: found.role,
+            id: found.id
+        }));
+        window.location.href = 'dashboard.html';
+    } else {
+        alert('❌ Invalid credentials');
+    }
+}
+
+// Staff login from modal on index.html
+function staffLogin() {
+    const usernameEl = document.getElementById('staffUsername');
+    const passwordEl = document.getElementById('staffPassword');
+    const username = usernameEl ? usernameEl.value.trim() : '';
+    const password = passwordEl ? passwordEl.value : '';
+
     const users = getUsers();
     const found = users.find(u => u.username === username && u.password === password);
 
@@ -58,7 +86,7 @@ function publicTrack() {
     }
 }
 
-// Toggle views
+// Toggle views (if you still use the old login/public view switching)
 function showPublicSearch() {
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('publicSearch').classList.remove('hidden');
@@ -72,6 +100,7 @@ function showLogin() {
 // Initialize
 initDefaultAdmin();
 
+// Show/hide password in staff login modal
 function togglePassword() {
     const input = document.getElementById('staffPassword');
     if (!input) return;
