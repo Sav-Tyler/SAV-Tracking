@@ -16,6 +16,7 @@ let signatureCanvas;
 let signatureCtx;
 let isDrawing = false;
 let capturedPhotoBlob = null;
+let fileInput = null;
 
 function normalizeStatus(status) {
   const s = (status || '').toLowerCase();
@@ -104,49 +105,66 @@ function updateSummary() {
   if (sentBackEl) sentBackEl.textContent = sentBackCount.toString();
 }
 
+function initializeFileInput() {
+  // Create file input element once and reuse it
+  if (!fileInput) {
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    fileInput.id = 'hidden-file-input';
+    document.body.appendChild(fileInput);
+    
+    // Set up the change handler
+    fileInput.addEventListener('change', handleFileSelect);
+  }
+  return fileInput;
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    showToast('❌ No file selected', 3000);
+    return;
+  }
+  
+  capturedPhotoBlob = file;
+  displayCapturedPhoto(file);
+  showToast('📸 Photo loaded! Click "Process" to extract label data.', 3000);
+  
+  // Reset the input so same file can be selected again
+  fileInput.value = '';
+}
+
 function openCameraCapture() {
-  console.log('openCameraCapture called');
   try {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.style.display = 'none';
+    const input = initializeFileInput();
     
-    // Check if mobile
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
-    console.log('Is mobile:', isMobile);
+    // Detect if on iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
     
-    if (isMobile) {
+    // Remove any existing capture attribute first
+    input.removeAttribute('capture');
+    
+    // Set capture for mobile
+    if (isIOS) {
+      // iOS: use capture for camera or file picker
+      input.capture = 'environment';
+    } else if (isAndroid) {
+      // Android: use capture for camera
       input.capture = 'environment';
     }
+    // Desktop: no capture attribute
     
-    input.onchange = function(e) {
-      console.log('File selected:', e.target.files[0]?.name);
-      const file = e.target.files[0];
-      if (!file) {
-        console.warn('No file selected');
-        return;
-      }
-      capturedPhotoBlob = file;
-      displayCapturedPhoto(file);
-      showToast('📸 Photo loaded! Click "Process" to extract label data.', 3000);
-      document.body.removeChild(input);
-    };
+    showToast('📁 Opening file picker...', 2000);
     
-    // Add to DOM and click
-    document.body.appendChild(input);
-    console.log('Input element created and appended');
-    
-    // Use setTimeout to ensure it's in the DOM before clicking
-    setTimeout(() => {
-      console.log('Triggering file picker');
-      input.click();
-    }, 50);
+    // Trigger file picker
+    input.click();
     
   } catch (error) {
     console.error('File picker error:', error);
-    showToast('❌ Could not open file picker. Check browser permissions.', 4000);
+    showToast('❌ Could not open file picker.', 4000);
   }
 }
 
@@ -330,11 +348,8 @@ function initLabelPhotoButtons() {
   const more = document.getElementById('addMoreLabelBtn');
   const finish = document.getElementById('finishBatchBtn');
   
-  console.log('Initializing photo buttons:', { take, process, more, finish });
-  
   if (take) {
     take.addEventListener('click', (e) => {
-      console.log('Take photo button clicked');
       e.preventDefault();
       e.stopPropagation();
       openCameraCapture();
@@ -410,7 +425,7 @@ function showBatchReport() {
       <h2 style="margin-top: 0; color: #60a5fa;">📦 Batch Processing Report</h2>
       <div style="background: #111827; padding: 16px; border-radius: 8px; margin: 16px 0;">
         <p style="margin: 8px 0;"><strong>Total Packages:</strong> ${batchProcessedPackages.length}</p>
-        <p style="margin: 8px 0; color: #10b981;"><strong>Small Packages (&lt;10 lbs):</strong> ${smallCount}</p>
+        <p style="margin: 8px 0; color: #10b981;"><strong>Small Packages (<10 lbs):</strong> ${smallCount}</p>
         <p style="margin: 8px 0; color: #f97316;"><strong>Large Packages (≥10 lbs):</strong> ${largeCount}</p>
         <p style="margin: 8px 0;"><strong>Total Weight:</strong> ${totalWeight.toFixed(2)} lbs</p>
       </div>
