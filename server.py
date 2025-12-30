@@ -16,7 +16,37 @@ CORS(app)
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
-
+@app.route('/login', methods=['POST'])
+def login():
+    """Handle staff login"""
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'message': 'Username and password required'}), 400
+    
+    db = get_db()
+    user = db.execute(
+        "SELECT * FROM users WHERE username = ?",
+        (username,)
+    ).fetchone()
+    db.close()
+    
+    if not user:
+        return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
+    
+    # Check password (supports both plain text 'password' field and hashed 'password_hash')
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    if user['password'] == password or user['password_hash'] == password_hash:
+        return jsonify({
+            'success': True,
+            'username': user['username'],
+            'role': user['role']
+        })
+    else:
+        return jsonify({'success': False, 'message': 'Invalid username or password'}), 401
 
 # Initialize PaddleOCR (runs locally, no external API calls)
 ocr = PaddleOCR(use_angle_cls=True, lang='en')
@@ -390,4 +420,5 @@ if __name__ == '__main__':
     init_db()
     add_package_columns_if_missing()
     app.run(host='127.0.0.1', port=5000, debug=True)
+
 
