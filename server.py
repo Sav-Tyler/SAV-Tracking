@@ -67,35 +67,7 @@ GRANDSTREAM_PASSWORD = "admin"         # Default admin password
 GRANDSTREAM_EXTENSION = "8000"         # Default extension to make outbound calls
 GRANDSTREAM_RECORDING_ID = "1"         # Default prerecorded message ID
 
-# ---------------------------------------------------------------------
-# Existing helpers: get_db, init_db, add_package_columns_if_missing,
-# get_setting, set_setting, etc. remain unchanged here.
-# ---------------------------------------------------------------------
-
-def normalize_postal_code(postal):
-    """Ensure postal code is in correct format and add default prefix if needed"""
-    if not postal:
-        return DEFAULT_POSTAL_PREFIX
-    postal = postal.upper().strip().replace(" ", "")
-    if len(postal) == 3:
-        return f"{DEFAULT_POSTAL_PREFIX} {postal}"
-    if len(postal) == 6:
-        return f"{postal[:3]} {postal[3:]}"
-    return postal
-
-def normalize_address(address, postal):
-    """Add Elliot Lake, ON if not present in address"""
-    if not address:
-        return f"{DEFAULT_CITY}, {DEFAULT_PROVINCE}"
-    address_lower = address.lower()
-    has_city = 'elliot lake' in address_lower or 'elliott lake' in address_lower
-    has_province = ', on' in address_lower or ', ontario' in address_lower
-    if not has_city and not has_province:
-        return f"{address}, {DEFAULT_CITY}, {DEFAULT_PROVINCE}"
-    elif not has_province:
-        return f"{address}, {DEFAULT_PROVINCE}"
-    return address
-
+# Database helper functions
 def get_db():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
@@ -216,7 +188,143 @@ def set_setting(key, value):
     db.commit()
     db.close()
 
-# ... all your existing API routes above /api/settings stay as-is ...
+def normalize_postal_code(postal):
+    """Ensure postal code is in correct format and add default prefix if needed"""
+    if not postal:
+        return DEFAULT_POSTAL_PREFIX
+    postal = postal.upper().strip().replace(" ", "")
+    if len(postal) == 3:
+        return f"{DEFAULT_POSTAL_PREFIX} {postal}"
+    if len(postal) == 6:
+        return f"{postal[:3]} {postal[3:]}"
+    return postal
+
+def normalize_address(address, postal):
+    """Add Elliot Lake, ON if not present in address"""
+    if not address:
+        return f"{DEFAULT_CITY}, {DEFAULT_PROVINCE}"
+    address_lower = address.lower()
+    has_city = 'elliot lake' in address_lower or 'elliott lake' in address_lower
+    has_province = ', on' in address_lower or ', ontario' in address_lower
+    if not has_city and not has_province:
+        return f"{address}, {DEFAULT_CITY}, {DEFAULT_PROVINCE}"
+    elif not has_province:
+        return f"{address}, {DEFAULT_PROVINCE}"
+    return address
+
+# ===== PACKAGE API ENDPOINTS =====
+
+@app.route('/api/packages', methods=['GET'])
+def get_packages():
+    """Get all packages"""
+    db = get_db()
+    rows = db.execute(
+        "SELECT id, courier, name, tracking, phone, postal, address, status, created_at, signed_at, label_image, signature_image FROM packages ORDER BY created_at DESC"
+    ).fetchall()
+    db.close()
+    
+    packages = []
+    for row in rows:
+        packages.append(dict(row))
+    
+    return jsonify(packages)
+
+@app.route('/api/packages', methods=['POST'])
+def add_package():
+    """Add a new package"""
+    data = request.json
+    courier = data.get('courier')
+    tracking = data.get('tracking')
+    name = data.get('name')
+    phone = data.get('phone', '')
+    postal = data.get('postal', '')
+    address = data.get('address', '')
+    status = data.get('status', 'pending')
+    
+    if not courier or not tracking or not name:
+        return jsonify({'success': False, 'message': 'Courier, tracking, and name are required'}), 400
+    
+    # Normalize postal code and address
+    postal = normalize_postal_code(postal)
+    address = normalize_address(address, postal)
+    
+    db = get_db()
+    try:
+        db.execute(
+            "INSERT INTO packages (courier, name, tracking, phone, postal, address, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (courier, name, tracking, phone, postal, address, status, datetime.now().isoformat())
+        )
+        db.commit()
+        db.close()
+        return jsonify({'success': True, 'message': 'Package added'})
+    except Exception as e:
+        db.close()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# ===== PUBLIC SEARCH ENDPOINT =====
+
+@app.route('/api/public-search', methods=['GET'])
+def public_search():
+    """Search packages by tracking, name, phone, or postal code"""
+    tracking = request.args.get('tracking', '').strip()
+    name = request.args.get('name', '').strip()
+    phone = request.args.get('phone', '').strip()
+    postal = request.args.get('postal', '').strip()
+    
+    db = get_db()
+    query = "SELECT id, courier, name, tracking, phone, postal, address, status, created_at FROM packages WHERE 1=1"
+    params = []
+    
+    if tracking:
+        query += " AND tracking LIKE ?"
+        params.append(f"%{tracking}%")
+    if name:
+        query += " AND name LIKE ?"
+        params.append(f"%{name}%")
+    if phone:
+        query += " AND phone LIKE ?"
+        params.append(f"%{phone}%")
+    if postal:
+        query += " AND postal LIKE ?"
+        params.append(f"%{postal}%")
+    
+    query += " ORDER BY created_at DESC"
+    
+    rows = db.execute(query, params).fetchall()
+    db.close()
+    
+    packages = [dict(row) for row in rows]
+    return jsonify({'packages': packages})
+
+# ===== PICKUP/SIGNATURE ENDPOINTS =====
+
+@app.route('/api/signatures/complete-pickup', methods=['POST'])
+def complete_pickup():
+    """Complete a pickup and store signature"""
+    data = request.json
+    package_ids = data.get('package_ids', [])
+    customer_name = data.get('customer_name', '')
+    signature_data = data.get('signature_data', '')
+    
+    if not package_ids:
+        return jsonify({'success': False, 'message': 'No packages specified'}), 400
+    
+    db = get_db()
+    try:
+        # Update packages as signed
+        for pkg_id in package_ids:
+            db.execute(
+                "UPDATE packages SET status = 'signed', signed_at = ?, signature_image = ? WHERE id = ?",
+                (datetime.now().isoformat(), signature_data, pkg_id)
+            )
+        db.commit()
+        db.close()
+        return jsonify({'success': True, 'message': 'Pickup completed'})
+    except Exception as e:
+        db.close()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# ===== SETTINGS ENDPOINTS =====
 
 @app.route('/api/settings', methods=['GET'])
 def get_settings():
@@ -236,6 +344,10 @@ def update_settings():
     page_bg_color = data.get('page_bg_color')
     tracking_bg_color = data.get('tracking_bg_color')
     staff_bar_bg_color = data.get('staff_bar_bg_color')
+    index_text_color = data.get('index_text_color')
+    index_header_bg = data.get('index_header_bg')
+    index_page_bg = data.get('index_page_bg')
+    index_tracking_bg = data.get('index_tracking_bg')
 
     if logo_url is not None:
         set_setting('logo_url', logo_url)
@@ -251,12 +363,18 @@ def update_settings():
         set_setting('tracking_bg_color', tracking_bg_color)
     if staff_bar_bg_color is not None:
         set_setting('staff_bar_bg_color', staff_bar_bg_color)
+    if index_text_color is not None:
+        set_setting('index_text_color', index_text_color)
+    if index_header_bg is not None:
+        set_setting('index_header_bg', index_header_bg)
+    if index_page_bg is not None:
+        set_setting('index_page_bg', index_page_bg)
+    if index_tracking_bg is not None:
+        set_setting('index_tracking_bg', index_tracking_bg)
 
     return jsonify({'success': True})
 
-# ---------------------------------------------------------------------
-# NEW: Grandstream PBX settings stored in DB and used by call endpoints
-# ---------------------------------------------------------------------
+# ===== GRANDSTREAM INTEGRATION =====
 
 @app.route('/api/grandstream', methods=['GET'])
 def get_grandstream_settings():
@@ -298,8 +416,6 @@ def get_grandstream_config():
     extension = get_setting('grandstream_extension', GRANDSTREAM_EXTENSION)
     recording_id = get_setting('grandstream_message_id', GRANDSTREAM_RECORDING_ID)
     return ip, username, password, extension, recording_id
-
-# GRANDSTREAM UCM6302A INTEGRATION
 
 @app.route('/api/call/customer/<int:customer_id>', methods=['POST'])
 def call_customer(customer_id):
