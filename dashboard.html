@@ -185,41 +185,31 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: 11px;
       cursor: pointer;
-      padding: 0;
+      padding: 8px;
       margin: 0;
       box-sizing: border-box;
       -webkit-user-select: none;
       user-select: none;
-      -webkit-tap-highlight-color: transparent;
+      -webkit-tap-highlight-color: rgba(56,189,248,0.2);
       -webkit-touch-callout: none;
       transition: all 0.15s ease-out;
       position: relative;
+      text-align: center;
     }
     .photo-tile:active {
       background: #111827;
       border-color: #38bdf8;
       transform: scale(0.95);
     }
-    .photo-tile-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
+    .photo-tile span {
+      display: block;
     }
-    .photo-tile-emoji {
+    .photo-tile .emoji {
       font-size: 24px;
       line-height: 1;
-      margin-bottom: 2px;
-    }
-    .photo-tile-label {
-      font-size: 11px;
-      color: #9ca3af;
-      text-align: center;
-      max-width: 70px;
-      line-height: 1.1;
+      margin-bottom: 4px;
     }
     .signature-pad {
       border-radius: 10px;
@@ -431,30 +421,22 @@
             <div style="margin-top: 10px;">
               <label>Label Photos:</label>
               <div class="photo-grid">
-                <div class="photo-tile" id="takeLabelPhotoBtn">
-                  <div class="photo-tile-content">
-                    <div class="photo-tile-emoji">📸</div>
-                    <div class="photo-tile-label">Take Photo</div>
-                  </div>
-                </div>
-                <div class="photo-tile" id="processLabelBtn">
-                  <div class="photo-tile-content">
-                    <div class="photo-tile-emoji">🚀</div>
-                    <div class="photo-tile-label">Process</div>
-                  </div>
-                </div>
-                <div class="photo-tile" id="addMoreLabelBtn">
-                  <div class="photo-tile-content">
-                    <div class="photo-tile-emoji">➕</div>
-                    <div class="photo-tile-label">More</div>
-                  </div>
-                </div>
-                <div class="photo-tile" id="finishBatchBtn">
-                  <div class="photo-tile-content">
-                    <div class="photo-tile-emoji">✅</div>
-                    <div class="photo-tile-label">Finish</div>
-                  </div>
-                </div>
+                <button class="photo-tile" id="takeLabelPhotoBtn" type="button">
+                  <span class="emoji">📸</span>
+                  <span>Take Photo</span>
+                </button>
+                <button class="photo-tile" id="processLabelBtn" type="button">
+                  <span class="emoji">🚀</span>
+                  <span>Process</span>
+                </button>
+                <button class="photo-tile" id="addMoreLabelBtn" type="button">
+                  <span class="emoji">➕</span>
+                  <span>More</span>
+                </button>
+                <button class="photo-tile" id="finishBatchBtn" type="button">
+                  <span class="emoji">✅</span>
+                  <span>Finish</span>
+                </button>
               </div>
             </div>
           </div>
@@ -482,12 +464,10 @@
                 <input type="text" id="pickupCustomerName" placeholder="Customer name for receipt">
 
                 <label style="margin-top:8px;">Optional Photo (ID or Package):</label>
-                <div class="photo-tile" id="pickupPhotoBtn">
-                  <div class="photo-tile-content">
-                    <div class="photo-tile-emoji">📸</div>
-                    <div class="photo-tile-label">Tap to take a photo</div>
-                  </div>
-                </div>
+                <button class="photo-tile" id="pickupPhotoBtn" type="button">
+                  <span class="emoji">📸</span>
+                  <span>Tap to take a photo</span>
+                </button>
 
                 <div style="margin-top:8px;">
                   <div class="signature-pad" id="signaturePad">
