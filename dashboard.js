@@ -16,7 +16,7 @@ let signatureCanvas;
 let signatureCtx;
 let isDrawing = false;
 let capturedPhotoBlob = null;
-let fileInput = null;
+let pickupPhotoBlob = null;
 
 function normalizeStatus(status) {
   const s = (status || '').toLowerCase();
@@ -105,26 +105,19 @@ function updateSummary() {
   if (sentBackEl) sentBackEl.textContent = sentBackCount.toString();
 }
 
-function initializeFileInput() {
-  // Create file input element once and reuse it
-  if (!fileInput) {
-    fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.style.display = 'none';
-    fileInput.id = 'hidden-file-input';
-    document.body.appendChild(fileInput);
-    
-    // Set up the change handler
-    fileInput.addEventListener('change', handleFileSelect);
+function openCameraCapture() {
+  showToast('📁 Opening camera/file picker...', 2000);
+  const input = document.getElementById('labelPhotoInput');
+  if (!input) {
+    showToast('❌ File input not found', 3000);
+    return;
   }
-  return fileInput;
+  input.click();
 }
 
-function handleFileSelect(event) {
+function handleLabelPhotoSelect(event) {
   const file = event.target.files[0];
   if (!file) {
-    showToast('❌ No file selected', 3000);
     return;
   }
   
@@ -132,40 +125,42 @@ function handleFileSelect(event) {
   displayCapturedPhoto(file);
   showToast('📸 Photo loaded! Click "Process" to extract label data.', 3000);
   
-  // Reset the input so same file can be selected again
-  fileInput.value = '';
+  // Reset input
+  event.target.value = '';
 }
 
-function openCameraCapture() {
-  try {
-    const input = initializeFileInput();
-    
-    // Detect if on iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isAndroid = /Android/.test(navigator.userAgent);
-    
-    // Remove any existing capture attribute first
-    input.removeAttribute('capture');
-    
-    // Set capture for mobile
-    if (isIOS) {
-      // iOS: use capture for camera or file picker
-      input.capture = 'environment';
-    } else if (isAndroid) {
-      // Android: use capture for camera
-      input.capture = 'environment';
-    }
-    // Desktop: no capture attribute
-    
-    showToast('📁 Opening file picker...', 2000);
-    
-    // Trigger file picker
-    input.click();
-    
-  } catch (error) {
-    console.error('File picker error:', error);
-    showToast('❌ Could not open file picker.', 4000);
+function openPickupPhoto() {
+  showToast('📁 Opening camera/file picker...', 2000);
+  const input = document.getElementById('pickupPhotoInput');
+  if (!input) {
+    showToast('❌ File input not found', 3000);
+    return;
   }
+  input.click();
+}
+
+function handlePickupPhotoSelect(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+  
+  pickupPhotoBlob = file;
+  displayPickupPhoto(file);
+  showToast('📸 Pickup photo saved!', 3000);
+  
+  // Reset input
+  event.target.value = '';
+}
+
+function displayPickupPhoto(file) {
+  const btn = document.getElementById('pickupPhotoBtn');
+  if (!btn) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    btn.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`;
+  };
+  reader.readAsDataURL(file);
 }
 
 function displayCapturedPhoto(file) {
@@ -343,10 +338,24 @@ async function addSinglePackage() {
 }
 
 function initLabelPhotoButtons() {
+  // Set up hidden file input handlers
+  const labelInput = document.getElementById('labelPhotoInput');
+  const pickupInput = document.getElementById('pickupPhotoInput');
+  
+  if (labelInput) {
+    labelInput.addEventListener('change', handleLabelPhotoSelect);
+  }
+  
+  if (pickupInput) {
+    pickupInput.addEventListener('change', handlePickupPhotoSelect);
+  }
+  
+  // Button click handlers
   const take = document.getElementById('takeLabelPhotoBtn');
   const process = document.getElementById('processLabelBtn');
   const more = document.getElementById('addMoreLabelBtn');
   const finish = document.getElementById('finishBatchBtn');
+  const pickupPhoto = document.getElementById('pickupPhotoBtn');
   
   if (take) {
     take.addEventListener('click', (e) => {
@@ -355,6 +364,7 @@ function initLabelPhotoButtons() {
       openCameraCapture();
     });
   }
+  
   if (process) {
     process.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -366,6 +376,7 @@ function initLabelPhotoButtons() {
       }
     });
   }
+  
   if (more) {
     more.addEventListener('click', (e) => {
       e.preventDefault();
@@ -376,11 +387,20 @@ function initLabelPhotoButtons() {
       if (photoPreview) photoPreview.remove();
     });
   }
+  
   if (finish) {
     finish.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       showBatchReport();
+    });
+  }
+  
+  if (pickupPhoto) {
+    pickupPhoto.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openPickupPhoto();
     });
   }
 }
