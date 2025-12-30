@@ -1,6 +1,7 @@
 // settings.js
 
 import { API_BASE_URL } from './config.js';
+import { apiGet, apiPost } from './common.js';
 
 let API_BASE = API_BASE_URL;
 
@@ -45,9 +46,7 @@ async function loadBrandingSection() {
   const logoUrlInput = document.getElementById('logoUrlInput');
 
   try {
-    const res = await fetch(`${API_BASE}/settings`);
-    if (!res.ok) return;
-    const settings = await res.json();
+    const settings = await apiGet('/settings');
     if (taglineInput) taglineInput.value = settings.tagline || '';
     if (logoUrlInput) logoUrlInput.value = settings.logo_url || '';
   } catch (e) {
@@ -68,16 +67,8 @@ async function saveBrandingSection() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/settings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (res.ok) {
-      alert('Branding updated.');
-    } else {
-      alert('Failed to save branding.');
-    }
+    await apiPost('/settings', payload);
+    alert('Branding updated.');
   } catch (e) {
     console.error('Failed to save branding', e);
     alert('Error saving branding.');
@@ -103,14 +94,11 @@ async function loadTelephonySection() {
   const passEl = document.getElementById('pbxPasswordInput');
 
   try {
-    const res = await fetch(`${API_BASE}/grandstream`);
-    if (!res.ok) return;
-    const data = await res.json();
-
-    if (hostEl) hostEl.value = data.ip || '';
-    if (portEl) portEl.value = data.port || data.extension || '';
-    if (userEl) userEl.value = data.username || '';
-    if (passEl) passEl.value = data.password || '';
+    const settings = await apiGet('/settings');
+    if (hostEl) hostEl.value = settings.grandstream_ip || '';
+    if (portEl) portEl.value = settings.grandstream_port || settings.grandstream_extension || '';
+    if (userEl) userEl.value = settings.grandstream_username || '';
+    if (passEl) passEl.value = settings.grandstream_password || '';
   } catch (e) {
     console.error('Failed to load Grandstream settings', e);
   }
@@ -123,23 +111,15 @@ async function saveTelephonySection() {
   const pass = document.getElementById('pbxPasswordInput')?.value || '';
 
   const payload = {
-    ip: host,
-    port,
-    username: user,
-    password: pass,
+    grandstream_ip: host,
+    grandstream_port: port,
+    grandstream_username: user,
+    grandstream_password: pass,
   };
 
   try {
-    const res = await fetch(`${API_BASE}/grandstream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (res.ok) {
-      alert('Telephony settings saved.');
-    } else {
-      alert('Failed to save telephony settings.');
-    }
+    await apiPost('/settings', payload);
+    alert('Telephony settings saved.');
   } catch (e) {
     console.error('Error saving telephony settings', e);
     alert('Error saving telephony settings.');
