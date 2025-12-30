@@ -243,6 +243,14 @@
       background: rgba(248,113,113,0.15);
       color: #f97316;
     }
+    .size-small {
+      background: rgba(79,172,254,0.15);
+      color: #38bdf8;
+    }
+    .size-large {
+      background: rgba(249,115,22,0.15);
+      color: #f97316;
+    }
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -339,11 +347,11 @@
               <div class="col-6">
                 <label for="courierSelect">Courier:</label>
                 <select id="courierSelect">
+                  <option value="">-- Select Courier --</option>
+                  <option value="Intelcom Dragonfly">Intelcom Dragonfly</option>
                   <option value="Purolator">Purolator</option>
                   <option value="FedEx">FedEx</option>
                   <option value="UPS">UPS</option>
-                  <option value="Dragonfly">Dragonfly</option>
-                  <option value="Intelecom">Intelecom</option>
                   <option value="ICS">ICS</option>
                   <option value="Canpar">Canpar</option>
                   <option value="Canada Post">Canada Post</option>
@@ -369,6 +377,14 @@
               <div class="col-6">
                 <label for="addressInput">Address</label>
                 <input type="text" id="addressInput" placeholder="Street or full address">
+              </div>
+              <div class="col-6">
+                <label for="weightInput">Weight (lbs)</label>
+                <input type="text" id="weightInput" placeholder="Auto-filled by OCR" readonly>
+              </div>
+              <div class="col-6">
+                <label for="sizeInput">Package Size</label>
+                <input type="text" id="sizeInput" placeholder="Small/Large" readonly>
               </div>
             </div>
 
@@ -412,7 +428,7 @@
               <div class="col-12">
                 <label for="pickupSearchInput">🔍 Search Customer</label>
                 <input type="text" id="pickupSearchInput" placeholder="Name, tracking, or phone">
-                <button class="btn btn-primary" type="button" id="pickupSearchBtn">Search</button>
+                <button class="btn btn-primary" type="button" id="pickupSearchBtn" style="margin-top: 4px;">Search</button>
                 <p style="font-size:11px; color:#9ca3af; margin-top:4px;">
                   Enter search criteria to find packages.
                 </p>
