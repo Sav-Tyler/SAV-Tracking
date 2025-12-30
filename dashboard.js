@@ -109,18 +109,28 @@ async function openCameraCapture() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.capture = 'environment';
+    // Note: 'capture' attribute only works on mobile browsers
+    // For development/desktop, users can still select files
+    // Mobile users will get camera option when available
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+    
+    if (isMobile) {
+      input.capture = 'environment';
+    }
+    
     input.onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
       capturedPhotoBlob = file;
       displayCapturedPhoto(file);
-      showToast('📸 Photo captured! Click "Process" to extract label data.', 3000);
+      showToast('📸 Photo loaded! Click "Process" to extract label data.', 3000);
     };
+    
     input.click();
   } catch (error) {
-    console.error('Camera error:', error);
-    showToast('❌ Could not access camera. Check permissions.', 4000);
+    console.error('File picker error:', error);
+    showToast('❌ Could not open file picker. Check browser permissions.', 4000);
   }
 }
 
@@ -145,7 +155,7 @@ function displayCapturedPhoto(file) {
 
 async function processLabelPhoto() {
   if (!capturedPhotoBlob) {
-    showToast('❌ No photo captured. Click "Take Photo" first.', 3000);
+    showToast('❌ No photo loaded. Click "Take Photo" first.', 3000);
     return;
   }
   const courier = document.getElementById('courierSelect')?.value || '';
@@ -287,6 +297,8 @@ async function addSinglePackage() {
     document.getElementById('weightInput').value = '';
     document.getElementById('sizeInput').value = '';
     capturedPhotoBlob = null;
+    const photoPreview = document.querySelector('[data-photo-preview]');
+    if (photoPreview) photoPreview.remove();
     
     await loadPackages();
     showToast('✅ Package added successfully!', 3000);
@@ -318,7 +330,8 @@ function initLabelPhotoButtons() {
     more.addEventListener('click', () => {
       showToast('📋 Ready for next label!', 3000);
       capturedPhotoBlob = null;
-      document.querySelector('[data-photo-preview]')?.remove();
+      const photoPreview = document.querySelector('[data-photo-preview]');
+      if (photoPreview) photoPreview.remove();
     });
   }
   if (finish) {
@@ -540,7 +553,7 @@ export function initDashboard() {
   const scriptelBtn = document.getElementById('scriptelPickupBtn');
   if (scriptelBtn) {
     scriptelBtn.addEventListener('click', () => {
-      showToast('🔧 Scriptel integration coming soon!', 3000);
+      showToast('🖊️ Scriptel integration coming soon!', 3000);
     });
   }
   initSignaturePad();
