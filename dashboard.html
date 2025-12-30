@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>SAV Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@v4/dist/tesseract.min.js"></script>
   <style>
@@ -12,6 +12,11 @@
       background: #0f172a;
       color: #e5e7eb;
       margin: 0;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
     .dashboard-shell {
       display: flex;
@@ -93,6 +98,9 @@
       font-size: 12px;
       font-weight: 500;
       cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
     .btn-primary {
       background: linear-gradient(135deg, #38bdf8, #6366f1);
@@ -174,16 +182,44 @@
       background: #020617;
       border: 1px solid #1f2937;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       font-size: 24px;
       cursor: pointer;
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      transition: all 0.15s ease-out;
+      position: relative;
     }
-    .photo-tile span {
+    .photo-tile:active {
+      background: #111827;
+      border-color: #38bdf8;
+      transform: scale(0.95);
+    }
+    .photo-tile-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .photo-tile-emoji {
+      font-size: 24px;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    .photo-tile-label {
       font-size: 11px;
       color: #9ca3af;
       text-align: center;
-      padding: 2px 4px 0;
+      max-width: 70px;
+      line-height: 1.1;
     }
     .signature-pad {
       border-radius: 10px;
@@ -392,27 +428,27 @@
               <label>Label Photos:</label>
               <div class="photo-grid">
                 <div class="photo-tile" id="takeLabelPhotoBtn">
-                  <div>
-                    <div>📸</div>
-                    <span>Take Photo</span>
+                  <div class="photo-tile-content">
+                    <div class="photo-tile-emoji">📸</div>
+                    <div class="photo-tile-label">Take Photo</div>
                   </div>
                 </div>
                 <div class="photo-tile" id="processLabelBtn">
-                  <div>
-                    <div>🚀</div>
-                    <span>Process</span>
+                  <div class="photo-tile-content">
+                    <div class="photo-tile-emoji">🚀</div>
+                    <div class="photo-tile-label">Process</div>
                   </div>
                 </div>
                 <div class="photo-tile" id="addMoreLabelBtn">
-                  <div>
-                    <div>➕</div>
-                    <span>More</span>
+                  <div class="photo-tile-content">
+                    <div class="photo-tile-emoji">➕</div>
+                    <div class="photo-tile-label">More</div>
                   </div>
                 </div>
                 <div class="photo-tile" id="finishBatchBtn">
-                  <div>
-                    <div>✅</div>
-                    <span>Finish</span>
+                  <div class="photo-tile-content">
+                    <div class="photo-tile-emoji">✅</div>
+                    <div class="photo-tile-label">Finish</div>
                   </div>
                 </div>
               </div>
@@ -443,9 +479,9 @@
 
                 <label for="pickupPhotoInput" style="margin-top:8px;">Optional Photo (ID or Package):</label>
                 <div class="photo-tile" id="pickupPhotoBtn">
-                  <div>
-                    <div>📸</div>
-                    <span>Tap to take a photo with your device camera</span>
+                  <div class="photo-tile-content">
+                    <div class="photo-tile-emoji">📸</div>
+                    <div class="photo-tile-label">Tap to take a photo</div>
                   </div>
                 </div>
 
@@ -456,7 +492,7 @@
                   <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
                     <button class="btn btn-secondary" type="button" id="clearSignatureBtn">🗑️ Clear</button>
                     <button class="btn btn-primary" type="button" id="completePickupBtn">✅ Complete Pickup</button>
-                    <button class="btn btn-secondary" type="button" id="scriptelPickupBtn">🖊️ Use Scripttel Signature Pad</button>
+                    <button class="btn btn-secondary" type="button" id="scriptelPickupBtn">🖊️ Use Scriptel Signature Pad</button>
                   </div>
                 </div>
               </div>
