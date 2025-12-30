@@ -5,6 +5,7 @@ import {
   cachePackages,
   readCachedPackages,
 } from './common.js';
+import { showToast } from './toast.js';
 
 let allPackages = [];
 let pendingPackages = [];
@@ -104,12 +105,12 @@ async function openCameraCapture() {
       if (!file) return;
       capturedPhotoBlob = file;
       displayCapturedPhoto(file);
-      alert('📸 Photo captured! Click "Process" to extract label data.');
+      showToast('📸 Photo captured! Click "Process" to extract label data.', 3000);
     };
     input.click();
   } catch (error) {
     console.error('Camera error:', error);
-    alert('Could not access camera. Please ensure camera permissions are granted.');
+    showToast('❌ Could not access camera. Check permissions.', 4000);
   }
 }
 
@@ -137,7 +138,7 @@ function extractFieldsFromText(text, courier) {
   if (!text) return out;
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   const postalRegex = /\b[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\s?\d[ABCEGHJ-NPRSTV-Z]\d\b/i;
-  const phoneRegex = /(\+?1[-.,\s]?)?(\(?\d{3}\)?[-.,\s]?\d{3}[-.,\s]?\d{4})/;
+  const phoneRegex = /(\+?1[-.,\s])?(\(?\d{3}\)?[-.,\s]?\d{3}[-.,\s]?\d{4})/;
   const trackingRegex = /\b[0-9A-Z]{8,}\b/g;
   const postalMatch = text.match(postalRegex);
   if (postalMatch) out.postal = postalMatch[0].toUpperCase();
@@ -154,42 +155,45 @@ function extractFieldsFromText(text, courier) {
 
 async function processLabelPhoto() {
   if (!capturedPhotoBlob) {
-    alert('No photo captured yet. Click "Take Photo" first.');
+    showToast('❌ No photo captured. Click "Take Photo" first.', 3000);
     return;
   }
   const courier = document.getElementById('courierSelect')?.value || '';
   if (!courier) {
-    alert('Please select a courier first.');
+    showToast('❌ Please select a courier first.', 3000);
     return;
   }
   if (typeof Tesseract === 'undefined') {
-    alert('OCR library is loading. Please wait and try again.');
+    showToast('⏳ OCR library loading. Try again in a moment.', 3000);
     return;
   }
   try {
-    alert('🔄 Processing label with OCR... This may take 15-30 seconds.');
+    const processingToast = showToast('🔄 Processing label with OCR... Please wait (15-30 sec)', 0);
+    
     const { data } = await Tesseract.recognize(capturedPhotoBlob, 'eng', {
       logger: m => console.log('OCR Progress:', m)
     });
+    
+    processingToast.remove();
+    
     const text = (data.text || '').replace(/\s+/g, ' ').trim();
     console.log('OCR Result:', text);
     const extracted = extractFieldsFromText(text, courier);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const trackingInput = document.getElementById('trackingInput');
-      const nameInput = document.getElementById('nameInput');
-      const phoneInput = document.getElementById('phoneInput');
-      const postalInput = document.getElementById('postalInput');
-      if (trackingInput) trackingInput.value = extracted.tracking || '';
-      if (nameInput) nameInput.value = extracted.name || '';
-      if (phoneInput) phoneInput.value = extracted.phone || '';
-      if (postalInput) postalInput.value = extracted.postal || '';
-      alert(`✅ OCR Complete!\n\nExtracted:\n- Tracking: ${extracted.tracking || '(not found)'}\n- Name: ${extracted.name || '(not found)'}\n- Phone: ${extracted.phone || '(not found)'}\n- Postal: ${extracted.postal || '(not found)'}\n\nReview and adjust if needed, then click Process to save.`);
-    };
-    reader.readAsDataURL(capturedPhotoBlob);
+    
+    const trackingInput = document.getElementById('trackingInput');
+    const nameInput = document.getElementById('nameInput');
+    const phoneInput = document.getElementById('phoneInput');
+    const postalInput = document.getElementById('postalInput');
+    
+    if (trackingInput) trackingInput.value = extracted.tracking || '';
+    if (nameInput) nameInput.value = extracted.name || '';
+    if (phoneInput) phoneInput.value = extracted.phone || '';
+    if (postalInput) postalInput.value = extracted.postal || '';
+    
+    showToast(`✅ OCR Complete! Found: ${extracted.tracking || 'no tracking'}`, 3000);
   } catch (error) {
     console.error('OCR error:', error);
-    alert('❌ OCR processing failed: ' + error.message);
+    showToast(`❌ OCR failed: ${error.message}`, 4000);
   }
 }
 
@@ -201,7 +205,7 @@ async function addSinglePackage() {
   const postal = document.getElementById('postalInput')?.value.trim() || '';
   const address = document.getElementById('addressInput')?.value.trim() || '';
   if (!courier || !tracking || !name) {
-    alert('Courier, tracking, and customer name are required.');
+    showToast('❌ Courier, tracking, and name required.', 3000);
     return;
   }
   const payload = {
@@ -222,10 +226,10 @@ async function addSinglePackage() {
     document.getElementById('addressInput').value = '';
     capturedPhotoBlob = null;
     await loadPackages();
-    alert('✅ Package added.');
+    showToast('✅ Package added successfully!', 3000);
   } catch (err) {
     console.error('Failed to add package', err);
-    alert('Could not add package.');
+    showToast('❌ Could not add package.', 3000);
   }
 }
 
@@ -248,12 +252,12 @@ function initLabelPhotoButtons() {
   }
   if (more) {
     more.addEventListener('click', () => {
-      alert('Multiple label images to be implemented.');
+      showToast('📋 Multiple images coming soon!', 3000);
     });
   }
   if (finish) {
     finish.addEventListener('click', () => {
-      alert('Batch finish to be implemented.');
+      showToast('✅ Batch finish coming soon!', 3000);
     });
   }
 }
@@ -263,7 +267,7 @@ function searchPackagesForPickup() {
     document.getElementById('pickupSearchInput')?.value.trim().toLowerCase() ||
     '';
   if (!q) {
-    alert('Enter name, tracking, or phone to search.');
+    showToast('❌ Enter name, tracking, or phone to search.', 3000);
     return;
   }
   selectedPackages = allPackages.filter((p) => {
@@ -275,7 +279,7 @@ function searchPackagesForPickup() {
     );
   });
   if (!selectedPackages.length) {
-    alert('No matching packages for this customer.');
+    showToast('❌ No packages found for that customer.', 3000);
     return;
   }
   const first = selectedPackages[0];
@@ -283,7 +287,7 @@ function searchPackagesForPickup() {
   if (nameInput && first.name) {
     nameInput.value = first.name;
   }
-  alert(`Found ${selectedPackages.length} package(s) for pickup.`);
+  showToast(`✅ Found ${selectedPackages.length} package(s)!`, 3000);
 }
 
 function initSignaturePad() {
@@ -351,13 +355,13 @@ function clearSignature() {
 
 async function completePickup() {
   if (!selectedPackages.length) {
-    alert('Search and select customer packages first.');
+    showToast('❌ Search for packages first.', 3000);
     return;
   }
   const name =
     document.getElementById('pickupCustomerName')?.value.trim() || '';
   if (!name) {
-    alert('Enter customer name.');
+    showToast('❌ Enter customer name.', 3000);
     return;
   }
   let signatureData = null;
@@ -366,7 +370,7 @@ async function completePickup() {
   }
   const ids = selectedPackages.map((p) => p.id).filter((id) => id != null);
   if (!ids.length) {
-    alert('No valid package IDs for pickup.');
+    showToast('❌ No valid packages for pickup.', 3000);
     return;
   }
   try {
@@ -379,10 +383,10 @@ async function completePickup() {
     selectedPackages = [];
     document.getElementById('pickupCustomerName').value = '';
     await loadPackages();
-    alert('✅ Pickup recorded.');
+    showToast('✅ Pickup recorded successfully!', 3000);
   } catch (err) {
     console.error('Pickup failed', err);
-    alert('Could not complete pickup.');
+    showToast('❌ Could not complete pickup.', 3000);
   }
 }
 
@@ -404,7 +408,7 @@ export function initDashboard() {
   const scriptelBtn = document.getElementById('scriptelPickupBtn');
   if (scriptelBtn) {
     scriptelBtn.addEventListener('click', () => {
-      alert('Scriptel integration to be implemented.');
+      showToast('🖊️ Scriptel integration coming soon!', 3000);
     });
   }
   initSignaturePad();
