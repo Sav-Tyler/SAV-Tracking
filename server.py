@@ -418,7 +418,7 @@ def call_bulk_customers():
 if __name__ == '__main__':
     init_db()
     add_package_columns_if_missing()
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
 
 
 
