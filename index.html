@@ -490,17 +490,36 @@
 
     async function loadBranding() {
       try {
-        const settings = await apiGet('/settings');
-        if (settings.logo_url && logoImage) {
-          logoImage.src = settings.logo_url;
-          logoImage.style.display = 'block';
-        }
-        if (settings.tagline && taglineText) {
-          taglineText.textContent = settings.tagline;
-        }
-      } catch (e) {
-        console.warn('Could not load branding settings', e);
-      }
+    const settings = await apiGet('/settings');
+    
+    // Apply color settings only if they exist (preserves CSS defaults)
+    if (settings.index_text_color) {
+      document.documentElement.style.setProperty('--index-text-color', settings.index_text_color);
+    }
+    if (settings.index_header_bg) {
+      document.documentElement.style.setProperty('--index-header-bg', settings.index_header_bg);
+    }
+    if (settings.index_page_bg) {
+      document.documentElement.style.setProperty('--index-page-bg', settings.index_page_bg);
+    }
+    if (settings.index_tracking_bg) {
+      document.documentElement.style.setProperty('--index-tracking-bg', settings.index_tracking_bg);
+    }
+    if (settings.index_staff_bar_bg) {
+      document.documentElement.style.setProperty('--index-staff-bar-bg', settings.index_staff_bar_bg);
+    }
+    
+    if (settings.logo_url && logoImage) {
+      logoImage.src = settings.logo_url;
+      logoImage.style.display = 'block';
+    }
+    if (settings.tagline && taglineText) {
+      taglineText.textContent = settings.tagline;
+    }
+  } catch (e) {
+    console.warn('Could not load branding settings', e);
+    // Colors will remain as defaults from CSS
+  }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -510,7 +529,14 @@
       lookupButton.addEventListener('click', performLookup);
       staffLoginToggle.addEventListener('click', toggleStaffLoginCard);
       passwordToggle.addEventListener('click', togglePasswordVisibility);
-      staffLoginButton.addEventListener('click', staffLogin);
+    staffLoginButton.addEventListener('click', async () => {
+      try {
+        await staffLogin();
+      } catch (error) {
+        console.error('Login button error:', error);
+        alert('An error occurred during login. Please try again.');
+      }
+    });
 
       ['click','mousemove','keydown','touchstart'].forEach(ev => {
         document.addEventListener(ev, registerActivity, { passive: true });
@@ -519,3 +545,4 @@
   </script>
 </body>
 </html>
+
