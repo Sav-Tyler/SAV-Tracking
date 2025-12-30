@@ -1,6 +1,5 @@
 // ocr.js
-
-// Simple Tesseract.js wrapper for SAV label OCR
+// Tesseract.js wrapper for SAV label OCR with weight and size classification
 
 async function processLabelFiles(files, courier) {
   if (!window.Tesseract) {
@@ -23,8 +22,11 @@ async function processLabelFiles(files, courier) {
 
     const text = (data.text || '').replace(/\s+/g, ' ').trim();
 
-    // Very simple heuristic extraction — adjust as you learn patterns
+    // Extract fields from OCR text
     const extracted = extractFieldsFromText(text, courier);
+
+    // Determine package size category
+    const packageSize = extracted.weight_lbs < 10 ? 'Small Package' : 'Large Package';
 
     const pkg = {
       id: Date.now() + i,
@@ -33,7 +35,10 @@ async function processLabelFiles(files, courier) {
       name: extracted.name || '',
       phone: extracted.phone || '',
       postal: extracted.postal || '',
-      weight: extracted.weight || '',
+      address: extracted.address || '',
+      weight_kg: extracted.weight_kg || 0,
+      weight_lbs: extracted.weight_lbs || 0,
+      size: packageSize,
       service: extracted.service || '',
       label_image: dataUrl,
       status: 'pending',
@@ -56,140 +61,123 @@ function fileToDataURL(file) {
   });
 }
 
-// Heuristic parser for label text (very basic; tuned later for your carriers)
+// Advanced field extraction with better pattern matching
 function extractFieldsFromText(text, courier) {
-  const out = { name: '', tracking: '', phone: '', postal: '', weight: '', service: '', shipper: '' };
+  const out = {
+    name: '',
+    tracking: '',
+    phone: '',
+    postal: '',
+    address: '',
+    weight_kg: 0,
+    weight_lbs: 0,
+    service: '',
+    shipper: ''
+  };
+
   if (!text) return out;
 
   const lines = text
     .split(/\r?\n/)
     .map(l => l.trim())
     .filter(Boolean);
-  const upper = lines.map(l => l.toUpperCase());
 
-  // Common patterns
+  // Patterns
   const postalRegex = /\b[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\s?\d[ABCEGHJ-NPRSTV-Z]\d\b/i;
-  const phoneRegex = /(\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/;
-  const weightRegex = /\b(\d+(?:\.\d+)?)\s*(LB|LBS|KG)\b/i;
+  const phoneRegex = /(\+?1[-.,\s])?(\(?\d{3}\)?[-.,\s]?\d{3}[-.,\s]?\d{4})/;
+  const weightRegex = /Ship\s+Wt[:\s]+([\d.]+)\s*(kg|lbs?|KG|LBS?)/i;
+  const trackingRegex = /\b[0-9A-Z]{8,}\b/g;
 
-  // Helper: find first line matching regex
-  const findLineIndex = (regex) => lines.findIndex(l => regex.test(l));
-
-  const courierUpper = (courier || '').toUpperCase();
-
-  // ---- UPS pattern ----
-  if (courierUpper.includes('UPS')) {
-    const trackingLine = lines.find(l => /TRACKING\s*#|1Z[0-9A-Z]/i.test(l));
-    if (trackingLine) {
-      const m = trackingLine.match(/(1Z[0-9A-Z ]{10,})/i);
-      out.tracking = m ? m[1].replace(/\s+/g, ' ').trim() : trackingLine;
+  // Extract weight (Kg) and convert to lbs
+  const weightMatch = text.match(weightRegex);
+  if (weightMatch) {
+    const weightValue = parseFloat(weightMatch[1]);
+    const weightUnit = (weightMatch[2] || 'kg').toLowerCase();
+    
+    if (weightUnit.includes('kg')) {
+      out.weight_kg = weightValue;
+      out.weight_lbs = parseFloat((weightValue * 2.20462).toFixed(2)); // kg to lbs
+    } else {
+      out.weight_lbs = weightValue;
+      out.weight_kg = parseFloat((weightValue / 2.20462).toFixed(2)); // lbs to kg
     }
-
-    const postalIdx = findLineIndex(postalRegex);
-    if (postalIdx > 0) {
-      // name is line just above city/postal line
-      out.postal = (lines[postalIdx].match(postalRegex) || [''])[0].toUpperCase();
-      out.name = lines[postalIdx - 1];
-    }
-
-    const phoneLine = lines.find(l => phoneRegex.test(l));
-    if (phoneLine) out.phone = phoneLine.match(phoneRegex)[0];
-
-    const weightLine = lines.find(l => weightRegex.test(l));
-    if (weightLine) out.weight = weightLine.match(weightRegex)[0];
-
-    const serviceLine = upper.find(l => l.includes('STANDARD') || l.includes('EXPRESS') || l.includes('SAVER'));
-    if (serviceLine) out.service = serviceLine;
   }
 
-  // ---- Straightship / Canpar / ICS generic parcel (Temu example) ----
-  else if (courierUpper.includes('CANPAR') || courierUpper.includes('ICS') || courierUpper.includes('STRAIGHT') || courierUpper.includes('FLEX')) {
-    const trackingLine = lines.find(l => /\bSTRTD[0-9A-Z]{10,}\b/i.test(l));
-    if (trackingLine) {
-      out.tracking = (trackingLine.match(/\bSTRTD[0-9A-Z]+/i) || [trackingLine])[0];
-    }
-
-    const postalIdx = findLineIndex(postalRegex);
-    if (postalIdx > 0) {
-      out.postal = (lines[postalIdx].match(postalRegex) || [''])[0].toUpperCase();
-      out.name = lines[postalIdx - 1]; // "Susan Warlow" style line
-    }
-
-    const phoneLine = lines.find(l => phoneRegex.test(l));
-    if (phoneLine) out.phone = phoneLine.match(phoneRegex)[0];
-
-    const weightLine = lines.find(l => weightRegex.test(l));
-    if (weightLine) out.weight = weightLine.match(weightRegex)[0];
+  // Extract postal code
+  const postalMatch = text.match(postalRegex);
+  if (postalMatch) {
+    out.postal = postalMatch[0].toUpperCase();
   }
 
-  // ---- Purolator labels ----
-  else if (courierUpper.includes('PUROLATOR')) {
-    // PIN style
-    let trackingLine = lines.find(l => /PUROLATOR\s+PIN/i.test(l));
-    if (!trackingLine) {
-      trackingLine = lines.find(l => /\b\d{10,}\b/.test(l) && /PKG|ID|I\.D./i.test(l));
-    }
-
-    if (trackingLine) {
-      const m = trackingLine.match(/\b\d{8,}\b/g);
-      if (m && m.length) out.tracking = m[m.length - 1];
-    }
-
-    const postalIdx = findLineIndex(postalRegex);
-    if (postalIdx > 0) {
-      out.postal = (lines[postalIdx].match(postalRegex) || [''])[0].toUpperCase();
-      out.name = lines[postalIdx - 1];
-    }
-
-    const phoneLine = lines.find(l => phoneRegex.test(l));
-    if (phoneLine) out.phone = phoneLine.match(phoneRegex)[0];
-
-    const weightLine = lines.find(l => weightRegex.test(l));
-    if (weightLine) out.weight = weightLine.match(weightRegex)[0];
+  // Extract phone number
+  const phoneMatch = text.match(phoneRegex);
+  if (phoneMatch) {
+    out.phone = phoneMatch[0];
   }
 
-  // ---- Intelcom / Dragonfly ----
-  else if (courierUpper.includes('DRAGONFLY') || courierUpper.includes('INTELCOM')) {
-    const trackingLine = lines.find(l => /TRACKING\s*:\s*INTLCM/i.test(l));
-    if (trackingLine) {
-      const m = trackingLine.match(/INTLCM[0-9A-Z]+/i);
-      if (m) out.tracking = m[0];
+  // Extract name - look for patterns with addresses
+  // For labels like the Intelcom/Dragonfly one, find customer name before postal code
+  const postalIdx = lines.findIndex(l => postalRegex.test(l));
+  if (postalIdx > 0) {
+    // Get the line before postal (usually city, province)
+    // Look backwards from postal line to find name
+    let nameIdx = postalIdx - 1;
+    while (nameIdx >= 0) {
+      const line = lines[nameIdx];
+      // Skip lines that are clearly city/province/address
+      if (!/^[A-Z\s,]+$/.test(line) || line.length < 5) {
+        // This might be the name
+        if (line.toLowerCase() !== line && line.length > 2) {
+          out.name = line;
+          break;
+        }
+      }
+      nameIdx--;
     }
-
-    const postalIdx = findLineIndex(postalRegex);
-    if (postalIdx > 0) {
-      out.postal = (lines[postalIdx].match(postalRegex) || [''])[0].toUpperCase();
-      out.name = lines[postalIdx - 1];
-    }
-
-    const phoneLine = lines.find(l => phoneRegex.test(l));
-    if (phoneLine) out.phone = phoneLine.match(phoneRegex)[0];
-
-    const weightLine = lines.find(l => weightRegex.test(l));
-    if (weightLine) out.weight = weightLine.match(weightRegex)[0];
   }
 
-  // ---- Fallback (any other courier) ----
+  // Handle Intelcom/Dragonfly - they often repeat the name
+  // Only take the first occurrence
+  if (out.name) {
+    // If name appears in text twice consecutively, clean it
+    const namePattern = new RegExp(`\\b${out.name.split(' ')[0]}\\b.*${out.name.split(' ')[0]}\\b`, 'gi');
+    if (text.match(namePattern) && (text.match(namePattern).length > 1)) {
+      // Name is repeated, just use it once (already captured)
+    }
+  }
+
+  // Extract address
+  if (postalIdx > 1) {
+    // Address is usually the line before postal code line (if name is before that)
+    for (let i = postalIdx - 2; i >= 0; i--) {
+      const line = lines[i];
+      if (line.length > 5 && !phoneRegex.test(line)) {
+        out.address = line;
+        break;
+      }
+    }
+  }
+
+  // Extract tracking number
+  // For Intelcom/Dragonfly, format is often: "INTLCM" followed by numbers
+  if (courier && courier.toUpperCase().includes('INTELCOM')) {
+    const intlcmMatch = text.match(/INTLCM[0-9]{8,}/i);
+    if (intlcmMatch) {
+      out.tracking = intlcmMatch[0];
+    }
+  } else if (courier && courier.toUpperCase().includes('DRAGONFLY')) {
+    const intlcmMatch = text.match(/INTLCM[0-9]{8,}/i);
+    if (intlcmMatch) {
+      out.tracking = intlcmMatch[0];
+    }
+  }
+
+  // Fallback: if no specific tracking found, look for longest alphanumeric sequence
   if (!out.tracking) {
-    const genericTracking = text.match(/\b[0-9A-Z]{8,}\b/g);
-    if (genericTracking && genericTracking.length) {
-      out.tracking = genericTracking[genericTracking.length - 1];
+    const trackings = text.match(trackingRegex);
+    if (trackings && trackings.length) {
+      out.tracking = trackings.sort((a, b) => b.length - a.length)[0];
     }
-  }
-
-  if (!out.postal) {
-    const m = text.match(postalRegex);
-    if (m) out.postal = m[0].toUpperCase();
-  }
-
-  if (!out.name && out.postal) {
-    const idx = lines.findIndex(l => l.toUpperCase().includes(out.postal));
-    if (idx > 0) out.name = lines[idx - 1];
-  }
-
-  if (!out.phone) {
-    const phoneLine = text.match(phoneRegex);
-    if (phoneLine) out.phone = phoneLine[0];
   }
 
   return out;
