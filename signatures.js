@@ -1,1 +1,120 @@
-let signaturePad;function initSignature(){signaturePad=new SignaturePad(document.getElementById('signatureCanvas'),{backgroundColor:'#fff'})}function clearSignature(){if(signaturePad)signaturePad.clear()}function loadCustomerPackages(){const n=document.getElementById('customerSigName').value.trim(),c=getCustomers().find(x=>x.name.toLowerCase().includes(n.toLowerCase()));if(!c)return alert('Not found');document.getElementById('customerPackages').innerHTML=getPackages().filter(p=>p.customerId===c.id&&p.status==='Available for Pickup').map(p=>'<div class="package-card"><input type="checkbox" data-id="'+p.id+'"> '+p.trackingNumber+' ('+p.courier+')</div>').join('');document.getElementById('signatureSection').classList.remove('hidden');if(!signaturePad)initSignature()}async function saveSignatures(){const cbs=document.querySelectorAll('#customerPackages input:checked');if(!cbs.length)return alert('Select packages');if(!signaturePad||signaturePad.isEmpty())return alert('Need signature');const sig=signaturePad.toDataURL(),photoFile=document.getElementById('photoInput').files[0];let photo=null;if(photoFile){const reader=new FileReader();photo=await new Promise(resolve=>{reader.onload=e=>resolve(e.target.result);reader.readAsDataURL(photoFile)})}let ps=getPackages();cbs.forEach(cb=>{const pkg=ps.find(p=>p.id==cb.dataset.id);if(pkg){pkg.status='Picked Up';pkg.signature=sig;if(photo)pkg.photo=photo}});savePackages(ps);alert('Saved');signaturePad.clear();document.getElementById('photoInput').value='';document.getElementById('signatureSection').classList.add('hidden');document.getElementById('customerPackages').innerHTML=''}
+// signatures.js
+// Customer pickup signatures using localStorage packages/customers
+
+let signaturePad;
+
+function initSignature() {
+  const canvas = document.getElementById('signatureCanvas');
+  if (!canvas) return;
+
+  signaturePad = new SignaturePad(canvas, {
+    backgroundColor: '#fff'
+  });
+}
+
+function clearSignature() {
+  if (signaturePad) {
+    signaturePad.clear();
+  }
+}
+
+function loadCustomerPackages() {
+  const nameInput = document.getElementById('customerSigName');
+  if (!nameInput) return;
+
+  const name = nameInput.value.trim();
+  if (!name) {
+    alert('Enter a customer name');
+    return;
+  }
+
+  const customers = getCustomers();
+  const customer = customers.find(c =>
+    c.name && c.name.toLowerCase().includes(name.toLowerCase())
+  );
+
+  if (!customer) {
+    alert('Customer not found');
+    return;
+  }
+
+  const allPackages = getPackages();
+  // Adjust status as needed; here using 'Available for Pickup' per original code
+  const customerPackages = allPackages.filter(
+    p => p.customerId === customer.id && p.status === 'Available for Pickup'
+  );
+
+  const listEl = document.getElementById('customerPackages');
+  if (!listEl) return;
+
+  listEl.innerHTML = customerPackages.map(p => `
+    <div class="package-card">
+      <input type="checkbox" data-id="${p.id}">
+      ${p.trackingNumber || p.tracking} (${p.courier || ''})
+    </div>
+  `).join('');
+
+  const sigSection = document.getElementById('signatureSection');
+  if (sigSection) {
+    sigSection.classList.remove('hidden');
+  }
+
+  if (!signaturePad) {
+    initSignature();
+  }
+}
+
+async function saveSignatures() {
+  const listEl = document.getElementById('customerPackages');
+  if (!listEl) return;
+
+  const checkboxes = listEl.querySelectorAll('input:checked');
+  if (!checkboxes.length) {
+    alert('Select at least one package');
+    return;
+  }
+
+  if (!signaturePad || signaturePad.isEmpty()) {
+    alert('Need a signature before saving');
+    return;
+  }
+
+  const signatureData = signaturePad.toDataURL();
+
+  const photoInput = document.getElementById('photoInput');
+  let photoData = null;
+  if (photoInput && photoInput.files && photoInput.files[0]) {
+    const reader = new FileReader();
+    photoData = await new Promise(resolve => {
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(photoInput.files[0]);
+    });
+  }
+
+  const allPackages = getPackages();
+  checkboxes.forEach(cb => {
+    const id = cb.dataset.id;
+    const pkg = allPackages.find(p => String(p.id) === String(id));
+    if (pkg) {
+      pkg.status = 'Picked Up';
+      pkg.signature = signatureData;
+      if (photoData) {
+        pkg.photo = photoData;
+      }
+    }
+  });
+
+  savePackages(allPackages);
+
+  alert('Signatures saved');
+
+  if (signaturePad) signaturePad.clear();
+  if (photoInput) photoInput.value = '';
+
+  const sigSection = document.getElementById('signatureSection');
+  if (sigSection) {
+    sigSection.classList.add('hidden');
+  }
+
+  listEl.innerHTML = '';
+}

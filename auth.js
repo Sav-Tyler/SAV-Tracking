@@ -1,103 +1,143 @@
-// Initialize default admin user
-function initDefaultAdmin() {
-    const users = getUsers();
-    if (!users.find(u => u.username === 'sav')) {
-        users.push({
-            id: Date.now(),
-            username: 'sav',
-            password: '$!SuperiorAudioVideo9!$',
-            role: 'admin'
-        });
-        saveUsers(users);
+// auth.js
+import { API_BASE_URL } from './config.js';
+import {
+  setAuthToken,
+  clearAuthToken,
+  setCurrentUser,
+  clearCurrentUser,
+} from './common.js';
+
+// Login via /api/auth/login
+async function login(username, password) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Login failed');
     }
+
+    const data = await response.json();
+    const token = data.token;
+    const user = data.user;
+
+    if (!token) {
+      throw new Error('No token received');
+    }
+
+    // Store token in sessionStorage (authoritative auth state)
+    setAuthToken(token);
+    // Optionally mirror user info to localStorage for convenience
+    setCurrentUser(user);
+
+    return { success: true, user };
+  } catch (error) {
+    console.error('Login error:', error);
+    return { success: false, message: error.message };
+  }
 }
 
-// Storage functions
-function getUsers() {
-    return JSON.parse(localStorage.getItem('users') || '[]');
-}
-function saveUsers(users) {
-    localStorage.setItem('users', JSON.stringify(users));
-}
-function getPackages() {
-    return JSON.parse(localStorage.getItem('packages') || '[]');
+// Logout: clear token and cached user
+function logout() {
+  clearAuthToken();
+  clearCurrentUser();
+  // Optionally clear any other session state
+  sessionStorage.removeItem('currentUser');
+  sessionStorage.removeItem('userRole');
+  sessionStorage.removeItem('userId');
+  // Redirect to login page
+  window.location.href = 'index.html';
 }
 
-// Login function (old inline login form, if still used)
-function doLogin() {
-    const username = document.getElementById('username')?.value.trim() || '';
-    const password = document.getElementById('password')?.value || '';
-    const users = getUsers();
-    const found = users.find(u => u.username === username && u.password === password);
+// Check if user is authenticated
+function isAuthenticated() {
+  return !!getAuthToken();
+}
 
-    if (found) {
-    sessionStorage.setItem('currentUser', found.username);
-    sessionStorage.setItem('userRole', found.role);
-    sessionStorage.setItem('userId', String(found.id));
-    window.location.href = 'dashboard.html';
-} else {
-    alert('❌ Invalid credentials');
+// Get current user from localStorage (for UI only, not as source of truth)
+function getCurrentUser() {
+  const userStr = localStorage.getItem('currentUser');
+  return userStr ? JSON.parse(userStr) : null;
 }
 
 // Staff login from modal on index.html
-function staffLogin() {
-    const usernameEl = document.getElementById('staffUsername');
-    const passwordEl = document.getElementById('staffPassword');
-    const username = usernameEl ? usernameEl.value.trim() : '';
-    const password = passwordEl ? passwordEl.value : '';
+async function staffLogin() {
+  const usernameEl = document.getElementById('staffUsername');
+  const passwordEl = document.getElementById('staffPassword');
 
-    const users = getUsers();
-    const found = users.find(u => u.username === username && u.password === password);
+  const username = usernameEl ? usernameEl.value.trim() : '';
+  const password = passwordEl ? passwordEl.value : '';
 
-if (found) {
-    sessionStorage.setItem('currentUser', found.username);
-    sessionStorage.setItem('userRole', found.role);
-    sessionStorage.setItem('userId', String(found.id));
+  if (!username || !password) {
+    alert('Username and password are required');
+    return;
+  }
+
+  const result = await login(username, password);
+  if (result.success) {
     window.location.href = 'dashboard.html';
-} else {
-    alert('❌ Invalid credentials');
-}
+  } else {
+    alert(`❌ ${result.message}`);
+  }
 }
 
-// Public tracking
-function publicTrack() {
-    const tracking = document.getElementById('publicTracking').value.trim();
-    const packages = getPackages();
-    const pkg = packages.find(p => p.trackingNumber === tracking);
-    const result = document.getElementById('publicResult');
-    
-    if (pkg && pkg.status === 'Available for Pickup') {
-        result.innerHTML = `<div class="package-card">
-            <h4>✅ Package Found!</h4>
-            <strong>Tracking:</strong> ${pkg.trackingNumber}<br>
-            <strong>Customer:</strong> ${pkg.customerName || pkg.name || 'Unknown'}<br>
-            <strong>Status:</strong> <span style="color: #28a745; font-weight: 600;">${pkg.status}</span><br>
-            <strong>Courier:</strong> ${pkg.courier}
-        </div>`;
+// Optional: public tracking helper for index.html (if still used there)
+// This is separate from customer_tracking.html.
+async function publicTrack() {
+  const trackingInput = document.getElementById('publicTracking');
+  const resultEl = document.getElementById('publicResult');
+
+  if (!trackingInput || !resultEl) return;
+
+  const tracking = trackingInput.value.trim();
+  if (!tracking) {
+    resultEl.innerHTML = '<div class="package-card">Enter a tracking number.</div>';
+    return;
+  }
+
+  try {
+    // Use the tracking endpoint
+    const pkg = await fetch(`${API_BASE_URL}/packages/${tracking}`).then(r => r.json());
+
+    if (pkg && pkg.status === 'pending') {
+      resultEl.innerHTML = `
+        <div class="package-card">
+          <strong>${pkg.tracking || pkg.trackingNumber}</strong><br>
+          ${pkg.name || ''}<br>
+          <small>${pkg.courier || ''}</small><br>
+          <span class="status-badge status-pending">📦 Awaiting Pickup</span>
+        </div>
+      `;
+    } else if (pkg) {
+      resultEl.innerHTML = `
+        <div class="package-card">
+          <strong>${pkg.tracking || pkg.trackingNumber}</strong><br>
+          ${pkg.name || ''}<br>
+          <small>${pkg.courier || ''}</small><br>
+          <span class="status-badge status-signed">✅ ${pkg.status || 'Completed'}</span>
+        </div>
+      `;
     } else {
-        result.innerHTML = `<div class="package-card" style="background: #f8d7da; color: #721c24;">
-            ❌ Package not found or already processed
-        </div>`;
+      resultEl.innerHTML = '<div class="package-card">No package found for that tracking number.</div>';
     }
+  } catch (error) {
+    console.error('Failed to fetch package:', error);
+    resultEl.innerHTML = '<div class="package-card">Error checking tracking number.</div>';
+  }
 }
 
-// Toggle views (if you still use the old login/public view switching)
-function showPublicSearch() {
-    document.getElementById('loginPage').classList.add('hidden');
-    document.getElementById('publicSearch').classList.remove('hidden');
-}
-
-function showLogin() {
-    document.getElementById('publicSearch').classList.add('hidden');
-    document.getElementById('loginPage').classList.remove('hidden');
-}
-
-// Initialize
-initDefaultAdmin();
-
-// Show/hide password in staff login modal
-function togglePassword() {
-    const input = document.getElementById('staffPassword');
-    if (!input) return;
-    input.type = input.type === 'password' ? 'text' : 'password';
-}
+// Export functions used by index.html and other pages
+export {
+  login,
+  logout,
+  isAuthenticated,
+  getCurrentUser,
+  staffLogin,
+  publicTrack,
+};

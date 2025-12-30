@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SAV Settings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="page-content">
+      <h1>System Settings</h1>
+
+      <div class="header">
+        <span id="welcomeUser"></span>
+        <div class="btn-group">
+          <button onclick="location.href='dashboard.html'">Dashboard</button>
+          <button onclick="location.href='admin.html'">Admin</button>
+          <button onclick="logout()">Logout</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Branding & Colors</h3>
+        <p>Customize the public tracking page appearance.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2">
+          <div class="section">
+            <h4>Logo & Tagline</h4>
+            <label>
+              Logo URL (or file path):
+              <input type="text" id="logoUrl" placeholder="e.g. /images/logo.png">
+            </label>
+            <label>
+              Tagline:
+              <input type="text" id="tagline" placeholder="e.g. Customer Package Manager">
+            </label>
+          </div>
+
+          <div class="section">
+            <h4>Colors</h4>
+            <label>
+              Text color:
+              <input type="color" id="textColor">
+            </label>
+            <label>
+              Header background:
+              <input type="color" id="headerBgColor">
+            </label>
+            <label>
+              Page background:
+              <input type="color" id="pageBgColor">
+            </label>
+            <label>
+              Tracking card background:
+              <input type="color" id="trackingBgColor">
+            </label>
+            <label>
+              Staff bar background:
+              <input type="color" id="staffBarBgColor">
+            </label>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button onclick="saveSettings()">Save Settings</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Grandstream UCM Settings</h3>
+        <p>Configure automated pickup calls via Grandstream UCM6302A.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2">
+          <div class="section">
+            <label>
+              Grandstream IP:
+              <input type="text" id="grandstreamIp" placeholder="e.g. 192.168.1.100">
+            </label>
+            <label>
+              Admin username:
+              <input type="text" id="grandstreamUsername" placeholder="e.g. admin">
+            </label>
+            <label>
+              Admin password:
+              <input type="password" id="grandstreamPassword" placeholder="••••••••">
+            </label>
+          </div>
+          <div class="section">
+            <label>
+              Extension for outbound calls:
+              <input type="text" id="grandstreamExtension" placeholder="e.g. 8000">
+            </label>
+            <label>
+              Recording ID (pre-recorded message):
+              <input type="text" id="grandstreamRecordingId" placeholder="e.g. 1">
+            </label>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="secondary" onclick="testCall()">Test Call</button>
+          <button onclick="saveGrandstreamSettings()">Save Grandstream Settings</button>
+        </div>
+      </div>
+
+      <div class="batch-complete">
+        <h3>Notes</h3>
+        <ul>
+          <li>Branding changes affect the public tracking page after refresh.</li>
+          <li>Grandstream settings are used for automated pickup reminders.</li>
+          <li>All settings are stored centrally in the server database.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load config and shared helpers -->
+  <script type="module">
+    import { API_BASE_URL } from './config.js';
+    window.API_BASE_URL = API_BASE_URL;
+  </script>
+  <script type="module" src="common.js"></script>
+  <script type="module">
+    import { checkAuth, logout, apiGet, apiPost } from './common.js';
+
+    // Attach logout globally for buttons
+    window.logout = logout;
+
+    function applyBranding(settings) {
+      const root = document.documentElement;
+      if (settings.text_color) root.style.setProperty('--index-text-color', settings.text_color);
+      if (settings.header_bg_color) root.style.setProperty('--index-header-bg', settings.header_bg_color);
+      if (settings.page_bg_color) root.style.setProperty('--index-page-bg', settings.page_bg_color);
+      if (settings.tracking_bg_color) root.style.setProperty('--index-tracking-bg', settings.tracking_bg_color);
+      if (settings.staff_bar_bg_color) root.style.setProperty('--index-staff-bar-bg', settings.staff_bar_bg_color);
+    }
+
+    async function loadSettings() {
+      try {
+        const settings = await apiGet('/settings');
+        document.getElementById('logoUrl').value = settings.logo_url || '';
+        document.getElementById('tagline').value = settings.tagline || '';
+        document.getElementById('textColor').value = settings.text_color || '#111827';
+        document.getElementById('headerBgColor').value = settings.header_bg_color || '#0891b2';
+        document.getElementById('pageBgColor').value = settings.page_bg_color || '#4f46e5';
+        document.getElementById('trackingBgColor').value = settings.tracking_bg_color || '#ffffff';
+        document.getElementById('staffBarBgColor').value = settings.staff_bar_bg_color || '#0891b2';
+
+        applyBranding(settings);
+
+        // Grandstream settings
+        document.getElementById('grandstreamIp').value = settings.grandstream_ip || '';
+        document.getElementById('grandstreamUsername').value = settings.grandstream_username || '';
+        document.getElementById('grandstreamPassword').value = settings.grandstream_password || '';
+        document.getElementById('grandstreamExtension').value = settings.grandstream_extension || '';
+        document.getElementById('grandstreamRecordingId').value = settings.grandstream_recording_id || '';
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+        alert('Failed to load settings from server.');
+      }
+    }
+
+    async function saveSettings() {
+      const payload = {
+        logo_url: document.getElementById('logoUrl').value.trim(),
+        tagline: document.getElementById('tagline').value.trim(),
+        text_color: document.getElementById('textColor').value,
+        header_bg_color: document.getElementById('headerBgColor').value,
+        page_bg_color: document.getElementById('pageBgColor').value,
+        tracking_bg_color: document.getElementById('trackingBgColor').value,
+        staff_bar_bg_color: document.getElementById('staffBarBgColor').value,
+      };
+
+      try {
+        await apiPost('/settings', payload);
+        applyBranding(payload);
+        alert('Branding settings saved.');
+      } catch (error) {
+        console.error('Failed to save settings:', error);
+        alert('Failed to save settings.');
+      }
+    }
+
+    async function saveGrandstreamSettings() {
+      const payload = {
+        grandstream_ip: document.getElementById('grandstreamIp').value.trim(),
+        grandstream_username: document.getElementById('grandstreamUsername').value.trim(),
+        grandstream_password: document.getElementById('grandstreamPassword').value.trim(),
+        grandstream_extension: document.getElementById('grandstreamExtension').value.trim(),
+        grandstream_recording_id: document.getElementById('grandstreamRecordingId').value.trim(),
+      };
+
+      try {
+        await apiPost('/settings', payload);
+        alert('Grandstream settings saved.');
+      } catch (error) {
+        console.error('Failed to save Grandstream settings:', error);
+        alert('Failed to save Grandstream settings.');
+      }
+    }
+
+    async function testCall() {
+      const testCustomerId = prompt('Enter a test customer ID to call:');
+      if (!testCustomerId) return;
+
+      try {
+        const result = await apiPost(`/call/customer/${testCustomerId}`, {});
+        if (result.success) {
+          alert(`Test call initiated: ${result.message || ''}`);
+        } else {
+          alert(`Test call failed: ${result.message || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Test call failed:', error);
+        alert('Failed to initiate test call.');
+      }
+    }
+
+    window.saveSettings = saveSettings;
+    window.saveGrandstreamSettings = saveGrandstreamSettings;
+    window.testCall = testCall;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = checkAuth();
+      if (user) {
+        const welcomeEl = document.getElementById('welcomeUser');
+        if (welcomeEl) {
+          welcomeEl.textContent = `Welcome, ${user.username} (${user.role})`;
+        }
+        loadSettings();
+      }
+    });
+  </script>
+</body>
+</html>

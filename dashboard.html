@@ -1,837 +1,570 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAV Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            min-height: 100vh;
-        }
-        
-        /* Top Navigation Bar */
-        .top-nav {
-            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-            color: white;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        .nav-left {
-            display: flex;
-            align-items: center;
-            gap: 30px;
-        }
-        .nav-logo {
-            font-size: 1.5em;
-            font-weight: bold;
-        }
-        .nav-menu {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-        .nav-item {
-            position: relative;
-        }
-        .nav-btn {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
-            font-size: 0.95em;
-        }
-        .nav-btn:hover {
-            background: rgba(255,255,255,0.2);
-        }
-        .logout-btn {
-            background: rgba(239, 68, 68, 0.9);
-            padding: 10px 25px;
-        }
-        .logout-btn:hover {
-            background: #dc2626;
-        }
-        
-        /* Dropdown Menus */
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background: white;
-            min-width: 200px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            border-radius: 8px;
-            margin-top: 10px;
-            overflow: hidden;
-        }
-        .dropdown-menu.active {
-            display: block;
-        }
-        .dropdown-item {
-            padding: 15px 20px;
-            color: #333;
-            cursor: pointer;
-            transition: all 0.2s;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .dropdown-item:last-child {
-            border-bottom: none;
-        }
-        .dropdown-item:hover {
-            background: #f0f9ff;
-            color: #0891b2;
-        }
-        
-        /* Main Content */
-        .container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
-        .welcome-text {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 1.1em;
-        }
-        
-        /* Card Sections */
-        .section-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 3px solid #0891b2;
-        }
-        .section-header h2 {
-            color: #333;
-            font-size: 1.8em;
-        }
-        
-        /* Form Styles */
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #555;
-        }
-        .form-group select,
-        .form-group input[type="file"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1em;
-        }
-        .form-group input[type="file"] {
-            cursor: pointer;
-        }
-        
-        /* Camera Capture Button */
-        .camera-btn {
-            background: #10b981;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-left: 10px;
-            transition: all 0.3s;
-        }
-        .camera-btn:hover {
-            background: #059669;
-        }
-        
-        .process-btn {
-            width: 100%;
-            padding: 15px;
-            background: #0891b2;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .process-btn:hover {
-            background: #0e7490;
-        }
-        
-        /* Customer Pickup Section */
-        .pickup-btn {
-            width: 100%;
-            padding: 20px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1.2em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-        }
-        .pickup-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-        }
-        
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            overflow-y: auto;
-        }
-        .modal.active {
-            display: flex;
-        }
-        .modal-content {
-            background: white;
-            border-radius: 20px;
-            max-width: 900px;
-            width: 95%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            margin: 20px;
-        }
-        .modal-header {
-            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-            color: white;
-            padding: 25px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-radius: 20px 20px 0 0;
-        }
-        .modal-header h2 {
-            margin: 0;
-            font-size: 1.8em;
-        }
-        .modal-close {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 2em;
-            cursor: pointer;
-            line-height: 1;
-        }
-        .modal-close:hover {
-            opacity: 0.7;
-        }
-        .modal-body {
-            padding: 30px;
-        }
-        
-        /* Search Section */
-        .search-section {
-            margin-bottom: 30px;
-        }
-        .search-input {
-            width: 100%;
-            padding: 15px;
-            font-size: 1.1em;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            margin-bottom: 15px;
-        }
-        .search-input:focus {
-            outline: none;
-            border-color: #0891b2;
-        }
-        .search-btn {
-            width: 100%;
-            padding: 15px;
-            background: #0891b2;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .search-btn:hover {
-            background: #0e7490;
-        }
-        
-        /* Package Cards */
-        .packages-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .package-card {
-            border: 2px solid #ddd;
-            border-radius: 12px;
-            padding: 20px;
-            background: #fafafa;
-        }
-        .package-card img {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        .package-info {
-            margin: 10px 0;
-        }
-        .package-info strong {
-            color: #0891b2;
-        }
-        .select-checkbox {
-            margin-right: 10px;
-            transform: scale(1.3);
-        }
-        
-        /* Signature Canvas */
-        .signature-section {
-            margin-top: 30px;
-            padding-top: 30px;
-            border-top: 2px solid #e0e0e0;
-        }
-        .signature-canvas {
-            border: 3px solid #0891b2;
-            border-radius: 10px;
-            cursor: crosshair;
-            width: 100%;
-            max-width: 100%;
-            background: white;
-            display: block;
-            touch-action: none;
-        }
-        .signature-buttons {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-        }
-        .sig-btn {
-            flex: 1;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .clear-sig-btn {
-            background: #6c757d;
-            color: white;
-        }
-        .clear-sig-btn:hover {
-            background: #5a6268;
-        }
-        .save-sig-btn {
-            background: #10b981;
-            color: white;
-        }
-        .save-sig-btn:hover {
-            background: #059669;
-        }
-        
-        .no-packages {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-            font-size: 1.2em;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .top-nav {
-                flex-direction: column;
-                gap: 15px;
-            }
-            .nav-left {
-                flex-direction: column;
-                gap: 15px;
-                width: 100%;
-            }
-            .nav-menu {
-                width: 100%;
-                justify-content: space-between;
-            }
-            .packages-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAV Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+    }
+    .top-nav {
+      background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+    }
+    .nav-logo {
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+    .nav-menu {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .nav-item {
+      position: relative;
+    }
+    .nav-btn {
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s;
+      font-size: 0.95em;
+    }
+    .nav-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .logout-btn {
+      background: rgba(239, 68, 68, 0.9);
+      padding: 10px 25px;
+    }
+    .logout-btn:hover {
+      background: #dc2626;
+    }
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: white;
+      min-width: 200px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      border-radius: 8px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .dropdown-menu.active {
+      display: block;
+    }
+    .dropdown-item {
+      padding: 15px 20px;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+    .dropdown-item:hover {
+      background: #f0f9ff;
+      color: #0891b2;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    .welcome-text {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 1.1em;
+    }
+    .section-card {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid #0891b2;
+    }
+    .section-header h2 {
+      color: #333;
+      font-size: 1.8em;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #555;
+    }
+    .form-group select,
+    .form-group input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1em;
+    }
+    .form-group input[type="file"] {
+      cursor: pointer;
+    }
+    .camera-btn {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-left: 10px;
+      transition: all 0.3s;
+    }
+    .camera-btn:hover {
+      background: #059669;
+    }
+    .process-btn {
+      width: 100%;
+      padding: 15px;
+      background: #0891b2;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .process-btn:hover {
+      background: #0e7490;
+    }
+    .pickup-btn {
+      width: 100%;
+      padding: 20px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.2em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+    .pickup-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      max-width: 900px;
+      width: 95%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      margin: 20px;
+    }
+    .modal-header {
+      background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+      color: white;
+      padding: 25px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 20px 20px 0 0;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.8em;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 2em;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-close:hover {
+      opacity: 0.7;
+    }
+    .modal-body {
+      padding: 30px;
+    }
+    .search-section {
+      margin-bottom: 30px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 15px;
+      font-size: 1.1em;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #0891b2;
+    }
+    .search-btn {
+      width: 100%;
+      padding: 15px;
+      background: #0891b2;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1em;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .search-btn:hover {
+      background: #0e7490;
+    }
+    .packages-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .package-card {
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      padding: 20px;
+      background: #fafafa;
+    }
+    .package-card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    .package-info {
+      margin: 10px 0;
+    }
+    .package-info strong {
+      color: #0891b2;
+    }
+    .select-checkbox {
+      margin-right: 10px;
+      transform: scale(1.3);
+    }
+    .signature-section {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 2px solid #e0e0e0;
+    }
+    .signature-canvas {
+      border: 3px solid #0891b2;
+      border-radius: 10px;
+      cursor: crosshair;
+      width: 100%;
+      max-width: 100%;
+      background: white;
+      display: block;
+      touch-action: none;
+    }
+    .signature-buttons {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .sig-btn {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .clear-sig-btn {
+      background: #6c757d;
+      color: white;
+    }
+    .clear-sig-btn:hover {
+      background: #5a6268;
+    }
+    .save-sig-btn {
+      background: #10b981;
+      color: white;
+    }
+    .save-sig-btn:hover {
+      background: #059669;
+    }
+    .no-packages {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+      font-size: 1.2em;
+    }
+    @media (max-width: 768px) {
+      .top-nav {
+        flex-direction: column;
+        gap: 15px;
+      }
+      .nav-left {
+        flex-direction: column;
+        gap: 15px;
+        width: 100%;
+      }
+      .nav-menu {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .packages-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-    <!-- Top Navigation -->
-    <div class="top-nav">
-        <div class="nav-left">
-            <div class="nav-logo">📦 SAV Dashboard</div>
-            <div class="nav-menu">
-                <!-- Admin Dropdown -->
-                <div class="nav-item">
-                    <button class="nav-btn" id="adminBtn" onclick="toggleDropdown('adminDropdown')">🔐 Admin ▾</button>
-                    <div class="dropdown-menu" id="adminDropdown">
-                        <div class="dropdown-item" onclick="openPage('admin.html')">👥 User Management</div>
-                        <div class="dropdown-item" onclick="openPage('admin.html')">⚙️ Settings</div>
-                    </div>
-                </div>
-                
-                <!-- Archived Dropdown -->
-                <div class="nav-item">
-                    <button class="nav-btn" onclick="toggleDropdown('archivedDropdown')">📂 Archived ▾</button>
-                    <div class="dropdown-menu" id="archivedDropdown">
-                        <div class="dropdown-item" onclick="openPage('archived.html')">🔍 Search Archived</div>
-                        <div class="dropdown-item" onclick="openPage('archived.html')">📊 View All</div>
-                    </div>
-                </div>
-            </div>
+  <!-- Top Navigation -->
+  <div class="top-nav">
+    <div class="nav-left">
+      <div class="nav-logo">📦 SAV Dashboard</div>
+      <div class="nav-menu">
+        <!-- Admin Dropdown -->
+        <div class="nav-item">
+          <button class="nav-btn" id="adminBtn" onclick="toggleDropdown('adminDropdown')">🔐 Admin ▾</button>
+          <div class="dropdown-menu" id="adminDropdown">
+            <div class="dropdown-item" onclick="openPage('admin.html')">👥 User Management</div>
+            <div class="dropdown-item" onclick="openPage('settings.html')">⚙️ Settings</div>
+          </div>
         </div>
-        <div class="nav-right">
-            <span style="margin-right: 15px;">Welcome, <strong id="username">User</strong></span>
-            <button class="nav-btn logout-btn" onclick="logout()">🚪 Logout</button>
+
+        <!-- Archived Dropdown -->
+        <div class="nav-item">
+          <button class="nav-btn" onclick="toggleDropdown('archivedDropdown')">📂 Archived ▾</button>
+          <div class="dropdown-menu" id="archivedDropdown">
+            <div class="dropdown-item" onclick="openPage('archived.html')">🔍 Search Archived</div>
+            <div class="dropdown-item" onclick="openPage('archived.html')">📊 View All</div>
+          </div>
         </div>
+      </div>
+    </div>
+    <div class="nav-right">
+      <span style="margin-right: 15px;">Welcome, <strong id="username">User</strong></span>
+      <button class="nav-btn logout-btn" onclick="logout()">🚪 Logout</button>
+    </div>
+  </div>
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Add Packages Section -->
+    <div class="section-card">
+      <div class="section-header">
+        <span style="font-size: 2em;">📦</span>
+        <h2>Add Packages (OCR)</h2>
+      </div>
+
+      <div class="form-group">
+        <label>Courier:</label>
+        <select id="courier">
+          <option value="Purolator">Purolator</option>
+          <option value="FedEx">FedEx</option>
+          <option value="UPS">UPS</option>
+          <option value="Dragonfly">Dragonfly</option>
+          <option value="Intelecom">Intelecom</option>
+          <option value="ICS">ICS</option>
+          <option value="Canpar">Canpar</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Label Photos:</label>
+        <input type="file" id="labelImages" multiple accept="image/*" capture="environment">
+        <button class="camera-btn" onclick="openCamera()">📸 Take Photo</button>
+      </div>
+
+      <button class="process-btn" onclick="processImages()">🚀 Process</button>
+
+      <div id="processing" style="margin-top: 20px;"></div>
+      <div id="pendingPackages" style="margin-top: 20px;"></div>
+      <div id="continueOrFinish" class="btn-group hidden" style="margin-top: 20px;">
+        <button onclick="continueBatch()">➕ More</button>
+        <button onclick="finishBatch()">✅ Finish</button>
+      </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="container">
-        <!-- Add Packages Section -->
-        <div class="section-card">
-            <div class="section-header">
-                <span style="font-size: 2em;">📦</span>
-                <h2>Add Packages (OCR)</h2>
-            </div>
-            
-            <div class="form-group">
-                <label>Courier:</label>
-                <select id="courier">
-                    <option value="Purolator">Purolator</option>
-                    <option value="FedEx">FedEx</option>
-                    <option value="UPS">UPS</option>
-                    <option value="Dragonfly">Dragonfly</option>
-                    <option value="Intelecom">Intelecom</option>
-                    <option value="ICS">ICS</option>
-                    <option value="Canpar">Canpar</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Label Photos:</label>
-                <input type="file" id="labelImages" multiple accept="image/*" capture="environment">
-                <button class="camera-btn" onclick="openCamera()">📸 Take Photo</button>
-            </div>
-            
-            <button class="process-btn" onclick="processImages()">🚀 Process</button>
-            
-                        <div id="processing" style="margin-top: 20px;"></div>
-            <div id="pendingPackages" style="margin-top: 20px;"></div>
-            <div id="continueOrFinish" class="btn-group hidden" style="margin-top: 20px;">
-                <button onclick="continueBatch()">➕ More</button>
-                <button onclick="finishBatch()">✅ Finish</button>
-            </div>
+    <!-- Customer Pickup Section -->
+    <div class="section-card">
+      <button class="pickup-btn" onclick="openCustomerPickup()">
+        ✍️ Customer Pickup
+      </button>
+    </div>
+  </div>
+
+  <!-- Customer Pickup Modal -->
+  <div id="pickupModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>✍️ Customer Pickup</h2>
+        <button class="modal-close" onclick="closeCustomerPickup()">×</button>
+      </div>
+      <div class="modal-body">
+        <!-- Search Section -->
+        <div class="search-section">
+          <h3>🔍 Search Customer</h3>
+          <input type="text" id="customerSearch" class="search-input" placeholder="Search by name, phone, or tracking number...">
+          <button class="search-btn" onclick="searchPackages()">Search</button>
         </div>
 
-        <!-- Customer Pickup Section -->
-        <div class="section-card">
-            <button class="pickup-btn" onclick="openCustomerPickup()">
-                ✍️ Customer Pickup
+        <!-- Packages Display -->
+        <div id="packagesDisplay">
+          <div class="no-packages">Enter search criteria to find packages</div>
+        </div>
+
+        <!-- Signature Section -->
+        <div class="signature-section" id="signatureSection" style="display: none;">
+          <h3>✍️ Customer Signature</h3>
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;">Customer Name:</label>
+            <input type="text" id="customerNameInput" placeholder="Enter customer name..." style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em;">
+          </div>
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;">Optional Photo (ID or Package):</label>
+            <input type="file" id="customerPhotoInput" accept="image/*" capture="environment" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
+            <small style="color: #666; display: block; margin-top: 5px;">📸 Tap to take a photo with your device camera</small>
+          </div>
+          <p style="margin-bottom: 15px; color: #666;">
+            Please have the customer sign below using touch or stylus
+          </p>
+          <canvas id="signatureCanvas" class="signature-canvas" width="800" height="200"></canvas>
+          <div class="signature-buttons">
+            <button class="sig-btn clear-sig-btn" onclick="clearSignature()">🗑️ Clear</button>
+            <button class="sig-btn save-sig-btn" onclick="saveSignature()">
+          <button class="sig-btn save-sig-btn" onclick="saveSignature()">✅ Complete Pickup</button>
+          </div>
+          <div id="scriptelSection" style="margin-top: 20px;">
+            <button class="sig-btn" onclick="useScriptelPad()" style="background: #6366f1; color: white;">
+              🖊️ Use Scripttel Signature Pad
             </button>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
+  <!-- Shipping Summary Section -->
+  <div id="shippingSummary" class="section-card" style="margin: 20px;">
+    <h2>Shipping Summary</h2>
+    <div id="shippingSummaryContent"></div>
+  </div>
+  <!-- Load config.js first -->
+  <script type="module">
+    import { API_BASE_URL } from './config.js';
+    window.API_BASE_URL = API_BASE_URL;
+  </script>
 
-    <!-- Customer Pickup Modal -->
-    <div id="pickupModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>✍️ Customer Pickup</h2>
-                <button class="modal-close" onclick="closeCustomerPickup()">×</button>
-            </div>
-            <div class="modal-body">
-                <!-- Search Section -->
-                <div class="search-section">
-                    <h3>🔍 Search Customer</h3>
-                    <input type="text" id="customerSearch" class="search-input" placeholder="Search by name, phone, or tracking number...">
-                    <button class="search-btn" onclick="searchPackages()">Search</button>
-                </div>
+  <!-- Then common.js (auth, API helpers, cache) -->
+  <script type="module" src="./js/common.js"></script>
 
-                <!-- Packages Display -->
-                <div id="packagesDisplay">
-                    <div class="no-packages">Enter search criteria to find packages</div>
-                </div>
+  <!-- Then auth.js (for checkAuth, logout) -->
+  <script type="module" src="./js/auth.js"></script>
 
+  <!-- Then dashboard.js (processImages, searchPackages, etc.) -->
+  <script type="module" src="./js/dashboard.js"></script>
+  <script>
+    // Auth and header setup
+    document.addEventListener('DOMContentLoaded', () => {
+      const auth = checkAuth();
+      if (!auth) return;
+      const { username, role } = auth;
+      const usernameSpan = document.getElementById('username');
+      if (usernameSpan) usernameSpan.textContent = username;
+      if (role !== 'admin') {
+        const adminBtn = document.getElementById('adminBtn');
+        if (adminBtn) adminBtn.style.display = 'none';
+      }
+      // loadShippingSummary() will be called from dashboard.js
+    });
 
-                    <!-- 5-Day Ready Packages Section -->
-    <div id="fiveDaySection" style="display:none; margin-bottom: 20px;">
-        <h3>⚠️ Packages Ready 5+ Days</h3>
-        <p style="color: #d32f2f; margin-bottom: 10px;">The following packages have been ready for pickup for 5 or more days:</p>
-        <div id="fiveDayPackageList" style="margin-bottom: 15px;"></div>
-        <button onclick="markSelectedAsSentBack()" style="padding: 10px 20px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">📦 Mark Selected as Sent Back</button>
-    </div>
-                <!-- Signature Section -->
-                <div class="signature-section" id="signatureSection" style="display: none;">
-                    <h3>✍️ Customer Signature</h3>
-                                        <div style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;">Customer Name:</label>
-                        <input type="text" id="customerNameInput" placeholder="Enter customer name..." style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em;">
-                    </div>
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #555;">Optional Photo (ID or Package):</label>
-                        <input type="file" id="customerPhotoInput" accept="image/*" capture="environment" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px;">
-                        <small style="color: #666; display: block; margin-top: 5px;">📸 Tap to take a photo with your device camera</small>
-                    </div>
-                    <p style="margin-bottom: 15px; color: #666;">
-                        Please have the customer sign below using touch or stylus
-                    </p>
-                    <canvas id="signatureCanvas" class="signature-canvas" width="800" height="200"></canvas>
-                    <div class="signature-buttons">
-                        <button class="sig-btn clear-sig-btn" onclick="clearSignature()">🗑️ Clear</button>
-                        <button class="sig-btn save-sig-btn" onclick="saveSignature()">✅ Complete Pickup</button>
-                    </div>
-                    <div id="scriptelSection" style="margin-top: 20px;">
-                        <button class="sig-btn" onclick="useScriptelPad()" style="background: #6366f1; color: white;">
-                            🖊️ Use Scripttel Signature Pad
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        </div>
-    </div>
+    // Dropdown logic
+    function toggleDropdown(id) {
+      const dropdown = document.getElementById(id);
+      const allDropdowns = document.querySelectorAll('.dropdown-menu');
+      allDropdowns.forEach(d => {
+        if (d.id !== id) d.classList.remove('active');
+      });
+      if (dropdown) dropdown.classList.toggle('active');
+    }
 
-    <!-- Shipping Summary Section -->
-    <div id="shippingSummary" class="section-card" style="margin: 20px;">
-        <h2>Shipping Summary</h2>
-        <div id="shippingSummaryContent"></div>
-    </div>
-
-    <script src="dashboard.js"></script>
-    <script>
-
-        // Check authentication
-        const currentUser = sessionStorage.getItem('currentUser');
-        const userRole = sessionStorage.getItem('userRole');
-        
-        if (!currentUser) {
-            window.location.href = 'index.html';
-        } else {
-            document.getElementById('username').textContent = currentUser;
-            
-            // Hide admin button for non-admin users
-            if (userRole !== 'admin') {
-                document.getElementById('adminBtn').style.display = 'none';
-            }
-        }
-
-        // Dropdown toggle
-        function toggleDropdown(id) {
-        527
-            const dropdown = document.getElementById(id);
-            const allDropdowns = document.querySelectorAll('.dropdown-menu');
-            
-            // Close all other dropdowns
-            allDropdowns.forEach(d => {
-                if (d.id !== id) d.classList.remove('active');
-            });
-            
-            dropdown.classList.toggle('active');
-        }
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.nav-item')) {
-                document.querySelectorAll('.dropdown-menu').forEach(d => {
-                    d.classList.remove('active');
-                });
-            }
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.nav-item')) {
+        document.querySelectorAll('.dropdown-menu').forEach(d => {
+          d.classList.remove('active');
         });
+      }
+    });
 
-        function openPage(page) {
-            window.location.href = page;
-        }
+    function openPage(page) {
+      window.location.href = page;
+    }
 
-        function logout() {
-            sessionStorage.clear();
-            window.location.href = 'index.html';
-        }
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = 'index.html';
+    }
 
-        // Customer Pickup Functions
-        let selectedPackages = [];
-        let signatureCanvas, signatureCtx;
-
-        function openCustomerPickup() {
-            document.getElementById('pickupModal').classList.add('active');
-            selectedPackages = [];
-        }
-
-        function closeCustomerPickup() {
-            document.getElementById('pickupModal').classList.remove('active');
-            document.getElementById('signatureSection').style.display = 'none';
-            document.getElementById('packagesDisplay').innerHTML = '<div class="no-packages">Enter search criteria to find packages</div>';
-        }
-
-        async function searchPackages() {
-            const searchTerm = document.getElementById('customerSearch').value.trim().toLowerCase();
-            
-            if (!searchTerm) {
-                alert('Please enter a search term');
-                return;
-            }
-
-            try {
-                const response = await fetch('http://localhost:5000/api/packages/pending');
-                if (!response.ok) throw new Error('Failed to fetch packages');
-                
-                const packages = await response.json();
-                
-                // Filter packages
-                const filtered = packages.filter(pkg => 
-                    pkg.name?.toLowerCase().includes(searchTerm) ||
-                    pkg.tracking?.toLowerCase().includes(searchTerm) ||
-                    pkg.phone?.toLowerCase().includes(searchTerm) ||
-                    pkg.postal?.toLowerCase().includes(searchTerm)
-                );
-
-                displayPackages(filtered);
-            } catch (error) {
-                console.error('Search error:', error);
-                alert('Error searching packages');
-            }
-        }
-
-        function displayPackages(packages) {
-            const container = document.getElementById('packagesDisplay');
-            
-            if (packages.length === 0) {
-                container.innerHTML = '<div class="no-packages">No packages found for this customer</div>';
-                return;
-            }
-
-            const html = `
-                <h3 style="margin-bottom: 20px;">📦 Found ${packages.length} Package(s)</h3>
-                <div class="packages-grid">
-                    ${packages.map(pkg => `
-                        <div class="package-card">
-                            ${pkg.label_image ? `<img src="${pkg.label_image}" alt="Label">` : ''}
-                            <div class="package-info">
-                                <input type="checkbox" class="select-checkbox" 
-                                       onchange="togglePackageSelection(${pkg.id}, this.checked)"
-                                       id="pkg_${pkg.id}">
-                                <strong>Tracking:</strong> ${pkg.tracking}
-                            </div>
-                            <div class="package-info"><strong>Courier:</strong> ${pkg.courier}</div>
-                            <div class="package-info"><strong>Name:</strong> ${pkg.name}</div>
-                            <div class="package-info"><strong>Phone:</strong> ${pkg.phone || 'N/A'}</div>
-                            <div class="package-info"><strong>Postal:</strong> ${pkg.postal}</div>
-                            <div class="package-info"><strong>Received:</strong> ${new Date(pkg.created_at).toLocaleDateString()}</div>
-                        </div>
-                    `).join('')}
-                </div>
-                <button class="search-btn" style="margin-top: 20px;" onclick="showSignatureSection()">
-                    Continue to Signature →
-                </button>
-            `;
-            
-            container.innerHTML = html;
-        }
-
-        function togglePackageSelection(packageId, selected) {
-            if (selected) {
-                if (!selectedPackages.includes(packageId)) {
-                    selectedPackages.push(packageId);
-                }
-            } else {
-                selectedPackages = selectedPackages.filter(id => id !== packageId);
-            }
-        }
-
-        function showSignatureSection() {
-            if (selectedPackages.length === 0) {
-                alert('Please select at least one package');
-                return;
-            }
-
-            document.getElementById('signatureSection').style.display = 'block';
-            
-            // Initialize canvas
-            signatureCanvas = document.getElementById('signatureCanvas');
-            signatureCtx = signatureCanvas.getContext('2d');
-            
-            // Set up drawing
-            let drawing = false;
-            
-            function startDrawing(e) {
-                drawing = true;
-                const rect = signatureCanvas.getBoundingClientRect();
-                const x = (e.clientX || e.touches[0].clientX) - rect.left;
-                const y = (e.clientY || e.touches[0].clientY) - rect.top;
-                signatureCtx.beginPath();
-                signatureCtx.moveTo(x, y);
-            }
-            
-            function draw(e) {
-                if (!drawing) return;
-                e.preventDefault();
-                const rect = signatureCanvas.getBoundingClientRect();
-                const x = (e.clientX || e.touches[0].clientX) - rect.left;
-                const y = (e.clientY || e.touches[0].clientY) - rect.top;
-                signatureCtx.lineTo(x, y);
-                signatureCtx.strokeStyle = '#000';
-                signatureCtx.lineWidth = 2;
-                signatureCtx.lineCap = 'round';
-                signatureCtx.stroke();
-            }
-            
-            function stopDrawing() {
-                drawing = false;
-            }
-            
-            // Mouse events
-            signatureCanvas.addEventListener('mousedown', startDrawing);
-            signatureCanvas.addEventListener('mousemove', draw);
-            signatureCanvas.addEventListener('mouseup', stopDrawing);
-            signatureCanvas.addEventListener('mouseout', stopDrawing);
-            
-            // Touch events for mobile
-            signatureCanvas.addEventListener('touchstart', startDrawing);
-            signatureCanvas.addEventListener('touchmove', draw);
-            signatureCanvas.addEventListener('touchend', stopDrawing);
-            
-            // Scroll to signature section
-            document.getElementById('signatureSection').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function clearSignature() {
-            signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
-        }
-
-        async function saveSignature() {
-            if (selectedPackages.length === 0) {
-                alert('No packages selected');
-                return;
-            }
-
-            // Check if signature is empty
-            const signatureData = signatureCanvas.toDataURL('image/png');
-            const blankCanvas = document.createElement('canvas');
-            blankCanvas.width = signatureCanvas.width;
-            blankCanvas.height = signatureCanvas.height;
-            
-            if (signatureData === blankCanvas.toDataURL('image/png')) {
-                alert('Please provide a signature');
-                return;
-            }
-
-            try {
-                // Save each selected package with signature
-                for (const packageId of selectedPackages) {
-                    const response = await fetch(`http://localhost:5000/api/packages/${packageId}/sign`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ signature: signatureData })
-                    });
-                    
-                    if (!response.ok) throw new Error('Failed to save signature');
-                }
-
-                alert(`✅ Successfully completed pickup for ${selectedPackages.length} package(s)!`);
-                closeCustomerPickup();
-            } catch (error) {
-                console.error('Save error:', error);
-                alert('Error saving signature. Please try again.');
-            }
-        }
-
-                function useScriptelPad() {
-            alert('Scripttel Signature Pad Integration\n\nTo integrate with Scripttel signature pad:\n\n1. Install Scripttel SDK\n2. Connect pad via USB\n3. Use Scripttel API to capture signature\n\nContact your IT administrator for setup assistance.');
-        }
-
-        // Shipping summary
-        async function loadShippingSummary() {
-            try {
-                const res = await fetch('/api/reports/shipping-summary');
-                if (!res.ok) throw new Error('Failed to fetch summary');
-                const data = await res.json();
-
-                const container = document.getElementById('shippingSummary');
-                const content = document.getElementById('shippingSummaryContent');
-                if (!container || !content) return;
-
-                let html = '<table style="width:100%; border-collapse: collapse;">';
-                html += '<tr><th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Shipping Company</th>' +
-                        '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Small (&lt;10 lbs)</th>' +
-                        '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Large (&ge;10 lbs)</th>' +
-                        '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Total</th></tr>';
-
-                Object.keys(data).forEach(company => {
-                    const s = data[company];
-                    html += `<tr>
-                        <td style="padding:8px; border-bottom:1px solid #eee;">${company}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee;">${s.small}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee;">${s.large}</td>
-                        <td style="padding:8px; border-bottom:1px solid #eee;">${s.total}</td>
-                    </tr>`;
-                });
-
-                html += '</table>';
-                content.innerHTML = html;
-            } catch (e) {
-                console.error('Failed to load shipping summary', e);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            loadShippingSummary();
-        });
-
-        // Mobile camera capture
-        function openCamera() {
-            const input = document.getElementById('labelImages');
-            input.setAttribute('capture', 'environment');
-            input.click();
-        }
-    </script>
+    // Camera helper
+    function openCamera() {
+      const input = document.getElementById('labelImages');
+      if (!input) return;
+      input.setAttribute('capture', 'environment');
+      input.click();
+    }
+  </script>
 </body>
 </html>
-
-    </script>
-</body>
-</html>
-
-
-
-

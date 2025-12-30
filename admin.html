@@ -1,110 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAV Admin</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAV Admin</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>🔐 Admin Panel</h1>
-    
-    <div class="header">
+  <div class="page-shell">
+    <div class="page-content">
+      <h1>🔐 Admin Panel</h1>
+
+      <div class="header">
         <span id="welcomeUser"></span>
         <div class="btn-group">
-            <button onclick="location.href='dashboard.html'">🏠 Dashboard</button>
-            <button onclick="logout()">🚪 Logout</button>
+          <button onclick="location.href='dashboard.html'">🏠 Dashboard</button>
+          <button onclick="logout()">🚪 Logout</button>
         </div>
-    </div>
-    
-    <div class="admin-only card">
-        <h3>User Management</h3>
-        
+      </div>
+
+      <!-- API URL Setting -->
+      <div class="admin-only card">
+        <h3>🌐 API URL</h3>
+        <p>Change this when moving from LAN to HTTPS (e.g. <code>https://sub.example.com/api</code>).</p>
         <div class="grid grid-cols-1 md:grid-cols-2">
-            <div class="card">
-                <h4>👤 Create User</h4>
-                <input type="text" id="newUsername" placeholder="Username">
-                <input type="password" id="newPassword" placeholder="Password">
-                <select id="newRole">
-                    <option value="standard">Standard</option>
-                    <option value="admin">Admin</option>
-                </select>
-                <button onclick="createUser()">💾 Save</button>
-            </div>          
+          <div class="card">
+            <h4>🔧 API Base URL</h4>
+            <input type="text" id="apiBaseUrlInput" placeholder="http://192.168.1.10:5000/api">
+            <button onclick="saveApiBaseUrl()">💾 Save API URL</button>
+            <p class="small">Changes take effect after reload.</p>
+          </div>
         </div>
-        
+      </div>
+
+      <div class="admin-only card">
+        <h3>User Management</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2">
+          <div class="card">
+            <h4>👤 Create User</h4>
+            <input type="text" id="newUsername" placeholder="Username">
+            <input type="password" id="newPassword" placeholder="Password">
+            <select id="newRole">
+              <option value="standard">Standard</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button onclick="createUser()">💾 Save</button>
+          </div>
+        </div>
+
         <div class="card">
-            <h4>📋 Users</h4>
-            <div id="userList" class="scrollable"></div>
+          <h4>📋 Users</h4>
+          <div id="userList" class="scrollable"></div>
         </div>
+      </div>
     </div>
+  </div>
 
-    <div class="admin-only card">
-        <h3>📢 Grandstream Integration Settings</h3>
-        
-        <div class="card">
-            <h4>📞 UCM6302A Configuration</h4>
-            <p style="color: #666; margin-bottom: 15px;">Configure your Grandstream UCM6302A for automatic customer calling after package processing.</p>
-            
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <div>
-                    <label>UCM6302A IP Address:</label>
-                    <input type="text" id="grandstreamIP" placeholder="e.g., 192.168.1.100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
-                </div>
-                <div>
-                    <label>Extension/Line:</label>
-                    <input type="text" id="grandstreamExt" placeholder="e.g., 1001" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
-                </div>
-                <div>
-                    <label>API Username:</label>
-                    <input type="text" id="grandstreamUser" placeholder="API username" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
-                </div>
-                <div>
-                    <label>API Password:</label>
-                    <input type="password" id="grandstreamPass" placeholder="API password" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
-                </div>
-                <div>
-                    <label>Recorded Message ID:</label>
-                    <input type="text" id="grandstreamMsgID" placeholder="Message ID for pickup notification" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
-                </div>
-            </div>
-            
-            <div style="margin-top: 15px; display: flex; gap: 10px;">
-                <button onclick="saveGrandstreamSettings()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">💾 Save Settings</button>
-                <button onclick="testGrandstreamConnection()" style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">🔌 Test Connection</button>
-            </div>
-        </div>
-    </div>
+  <!-- Load config.js first -->
+  <script type="module">
+    // Read stored API_BASE_URL from localStorage, or use default
+    const storedBaseUrl = localStorage.getItem('API_BASE_URL');
+    const DEFAULT_API_BASE_URL = 'http://192.168.1.10:5000/api';
+    const API_BASE_URL = storedBaseUrl || DEFAULT_API_BASE_URL;
 
-<!-- Branding Settings -->
-			<div class="admin-only card">
-			<h3>Branding Settings</h3>
+    // Make available to admin.js
+    window.API_BASE_URL = API_BASE_URL;
 
-			<div class="form-group">
-			<label for="logoFileInput">Company Logo (PNG/JPEG, max 400px wide)</label>
-			<input type="file" id="logoFileInput" accept="image/png,image/jpeg">
-			<small style="color:#666; display:block; margin-top:4px;">
-            Choose a logo from this computer. It will be stored in the app and shown on the public page.
-			</small>
-			<div style="margin-top:10px;">
-            <img id="logoPreview" src="" alt="Logo preview" style="max-width:200px; max-height:80px; display:none; border:1px solid #eee; padding:4px; border-radius:4px;">
-			</div>
-		</div>
+    // Expose a function to save a new URL
+    window.saveApiBaseUrlToStorage = function(newUrl) {
+      localStorage.setItem('API_BASE_URL', newUrl);
+    };
+  </script>
 
-    <div class="form-group">
-        <label for="taglineInput">Homepage Tagline</label>
-        <input type="text" id="taglineInput" placeholder="Track your packages with ...">
-    </div>
+  <!-- Then common.js (auth, API helpers, cache) -->
+  <script type="module" src="./js/common.js"></script>
 
-    <button onclick="saveBranding()" style="width:100%; padding:10px 0; border:none; border-radius:6px; background:#0369a1; color:#fff; font-weight:600; cursor:pointer;">
-        Save Branding
-    </button>
-</div>
+  <!-- Then auth.js (logout function) -->
+  <script type="module" src="./js/auth.js"></script>
 
-
-    <script src="common.js"></script>
-    <script src="admin.js"></script>
+  <!-- Finally page-specific JS -->
+  <script type="module" src="./js/admin.js"></script>
 </body>
 </html>
-
-

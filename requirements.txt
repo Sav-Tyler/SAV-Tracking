@@ -1,7 +1,11 @@
 Flask==3.0.0
 Flask-CORS==4.0.0
+
+# OCR and image processing
 paddleocr>=2.7.0.0
 paddlepaddle>=2.6.2
 numpy==1.26.4
-opencv-python==2.7.0.0
-opencv-contrib-python==4.6.0.66
+opencv-python==4.6.0.66
+
+# HTTP requests to Grandstream UCM
+requests==2.31.0

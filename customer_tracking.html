@@ -85,49 +85,75 @@
         <div id="result"></div>
     </div>
 
+    <!-- Load config.js first -->
+    <script type="module">
+      import { API_BASE_URL } from './config.js';
+      window.API_BASE_URL = API_BASE_URL;
+    </script>
+
+    <!-- Then common.js (for API helpers) -->
+    <script type="module" src="./js/common.js"></script>
+
+    <!-- Inline tracking script -->
     <script>
-        async function trackPackage() {
-            const tracking = document.getElementById('trackingInput').value.trim();
-            const resultDiv = document.getElementById('result');
-            
-            if (!tracking) {
-                resultDiv.innerHTML = '<div class="error-message">Please enter a tracking number</div>';
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/track/${tracking}`);
-                
-                if (response.ok) {
-                    const pkg = await response.json();
-                    const statusClass = pkg.status === 'signed' ? 'status-signed' : 'status-pending';
-                    const statusText = pkg.status === 'signed' ? '✅ Delivered & Signed' : '📦 In Transit';
-                    
-                    resultDiv.innerHTML = `
-                        <div class="package-result">
-                            <h2>Package Found!</h2>
-                            <p><strong>Courier:</strong> ${pkg.courier}</p>
-                            <p><strong>Tracking:</strong> ${pkg.tracking}</p>
-                            <p><strong>Recipient:</strong> ${pkg.name}</p>
-                            <p><strong>Received:</strong> ${new Date(pkg.created_at).toLocaleString()}</p>
-                            ${pkg.signed_at ? `<p><strong>Signed:</strong> ${new Date(pkg.signed_at).toLocaleString()}</p>` : ''}
-                            <span class="status-badge ${statusClass}">${statusText}</span>
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = '<div class="error-message">❌ Package not found. Please check your tracking number.</div>';
-                }
-            } catch (error) {
-                resultDiv.innerHTML = '<div class="error-message">❌ Error connecting to server. Please try again.</div>';
-            }
+      function trackPackage() {
+        const tracking = document.getElementById('trackingInput').value.trim();
+        const resultDiv = document.getElementById('result');
+
+        if (!tracking) {
+          resultDiv.innerHTML = '<div class="error-message">Please enter a tracking number</div>';
+          return;
         }
-        
-        // Allow Enter key to search
-        document.getElementById('trackingInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                trackPackage();
+
+        // Show loading state
+        resultDiv.innerHTML = '<div class="package-result">Loading...</div>';
+
+        // Use the API endpoint /api/packages/{tracking}
+        fetch(`${window.API_BASE_URL}/packages/${tracking}`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Package not found');
             }
-        });
+            return response.json();
+          })
+          .then(pkg => {
+            let statusClass = 'status-pending';
+            let statusText = '📦 Awaiting Pickup';
+
+            if (pkg.status === 'Picked Up' || pkg.status === 'signed') {
+              statusClass = 'status-signed';
+              statusText = '✅ Picked Up';
+            } else if (pkg.status === 'Sent Back') {
+              statusClass = 'status-signed';
+              statusText = '↩️ Returned to Sender';
+            }
+
+            resultDiv.innerHTML = `
+              <div class="package-result">
+                <h2>Package Found!</h2>
+                <p><strong>Courier:</strong> ${pkg.courier || ''}</p>
+                <p><strong>Tracking:</strong> ${pkg.tracking || ''}</p>
+                <p><strong>Recipient:</strong> ${pkg.name || ''}</p>
+                <p><strong>Received:</strong> ${
+                  pkg.created_at ? new Date(pkg.created_at).toLocaleString() : 'N/A'
+                }</p>
+                ${pkg.signed_at ? `<p><strong>Picked Up:</strong> ${new Date(pkg.signed_at).toLocaleString()}</p>` : ''}
+                <span class="status-badge ${statusClass}">${statusText}</span>
+              </div>
+            `;
+          })
+          .catch(error => {
+            console.error('Tracking failed:', error);
+            resultDiv.innerHTML = '<div class="error-message">❌ Package not found. Please check your tracking number.</div>';
+          });
+      }
+      
+      // Allow Enter key to search
+      document.getElementById('trackingInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          trackPackage();
+        }
+      });
     </script>
 </body>
 </html>

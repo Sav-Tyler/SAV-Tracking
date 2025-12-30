@@ -1,446 +1,283 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAV Signatures</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<script type="module">
+  import { apiGet, logout as commonLogout } from './common.js';
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+  let pickups = [];
+  let packagesByCustomer = {};
+  let selectedPickup = null;
+  let signatureCanvas, signatureCtx;
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+  function logout() {
+    commonLogout();
+  }
 
-        .header {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
-            text-align: center;
-        }
+  async function fetchPickups() {
+    try {
+      pickups = await apiGet('/pickups');
 
-        .header h1 {
-            color: #667eea;
-            font-size: 2.5em;
-            margin-bottom: 20px;
-        }
+      const customerIds = [...new Set(pickups.map(p => p.customer_id).filter(Boolean))];
+      packagesByCustomer = {};
 
-        .user-info {
-            text-align: left;
-            margin-bottom: 20px;
-            font-size: 1.1em;
-            color: #333;
+      for (const customerId of customerIds) {
+        try {
+          const pkgs = await apiGet(`/customers/${customerId}/packages?status=signed`);
+          packagesByCustomer[customerId] = pkgs;
+        } catch (err) {
+          console.warn('Could not load packages for customer', customerId, err);
         }
+      }
 
-        .nav-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
+      applyPickupFilter();
+    } catch (err) {
+      console.error(err);
+      const tbody = document.getElementById('pickupTableBody');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px;">Error loading pickup history</td></tr>';
+    }
+  }
 
-        .nav-btn {
-            background: #0891b2;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 1.1em;
-            font-weight: bold;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+  function applyPickupFilter() {
+    const search = document.getElementById('filterSearch').value.trim().toLowerCase();
+    const range = document.getElementById('filterRange').value;
+    const now = new Date();
 
-        .nav-btn:hover {
-            background: #0e7490;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-        }
+    let filtered = pickups.slice();
 
-        .search-section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
-        }
+    if (range !== 'all') {
+      const days = parseInt(range, 10);
+      const cutoff = new Date();
+      cutoff.setDate(now.getDate() - days);
+      filtered = filtered.filter(p => {
+        const ts = new Date(p.timestamp);
+        return ts >= cutoff;
+      });
+    }
 
-        .search-section h2 {
-            color: #333;
-            margin-bottom: 20px;
-        }
+    if (search) {
+      filtered = filtered.filter(p => {
+        const customerName = (p.customer_name || '').toLowerCase();
+        const pickupName = (p.pickup_name || '').toLowerCase();
+        const idNumber = (p.pickup_id_number || '').toLowerCase();
+        return (
+          customerName.includes(search) ||
+          pickupName.includes(search) ||
+          idNumber.includes(search)
+        );
+      });
+    }
 
-        .search-box {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            font-size: 1.1em;
-            margin-bottom: 15px;
-        }
+    renderPickupTable(filtered);
+  }
 
-        .search-box:focus {
-            outline: none;
-            border-color: #0891b2;
-        }
+  function renderPickupTable(list) {
+    const tbody = document.getElementById('pickupTableBody');
+    const countEl = document.getElementById('pickupCount');
+    countEl.textContent = list.length;
 
-        .load-btn {
-            background: #0891b2;
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 1.1em;
-            font-weight: bold;
-            width: 100%;
-            transition: all 0.3s ease;
-        }
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px;">No pickups found for this filter</td></tr>';
+      return;
+    }
 
-        .load-btn:hover {
-            background: #0e7490;
-        }
+    tbody.innerHTML = '';
+    list.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.style.cursor = 'pointer';
+      tr.onclick = () => selectPickup(p);
 
-        .packages-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
+      const pkgCount = (packagesByCustomer[p.customer_id] || []).length;
+      const when = new Date(p.timestamp).toLocaleString();
 
-        .package-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        }
+      tr.innerHTML = `
+        <td>
+          <div>${p.pickup_name || '(No pickup name)'}</div>
+          <div style="font-size:10px; color:rgba(148,163,184,0.95);">ID: ${p.id}</div>
+        </td>
+        <td>${p.customer_name || '(Unknown customer)'}</td>
+        <td>${pkgCount} pkg(s)</td>
+        <td>${when}</td>
+      `;
 
-        .package-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
+      tbody.appendChild(tr);
+    });
+  }
 
-        .package-image {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            border: 2px solid #ddd;
-        }
+  function selectPickup(pickup) {
+    selectedPickup = pickup;
+    document.getElementById('detailCustomerName').value = pickup.customer_name || '';
+    document.getElementById('detailPickupName').value = pickup.pickup_name || '';
+    document.getElementById('detailIdType').value = pickup.pickup_id_type || '';
+    document.getElementById('detailIdNumber').value = pickup.pickup_id_number || '';
+    document.getElementById('detailPickupId').textContent = pickup.id;
+    document.getElementById('detailPickupTime').textContent = new Date(pickup.timestamp).toLocaleString();
 
-        .package-info {
-            margin-bottom: 10px;
-        }
+    const summaryEl = document.getElementById('selectedPickupSummary');
+    const pkgCount = (packagesByCustomer[pickup.customer_id] || []).length;
+    summaryEl.textContent = `${pkgCount} package(s) · Pickup #${pickup.id}`;
 
-        .package-info strong {
-            color: #667eea;
-            display: inline-block;
-            min-width: 100px;
-        }
-
-        .signature-section {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid #f0f0f0;
-        }
-
-        .signature-canvas {
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            cursor: crosshair;
-            width: 100%;
-            background: #fafafa;
-            margin: 15px 0;
-        }
-
-        .signature-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .clear-btn, .save-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .clear-btn {
-            background: #6c757d;
-            color: white;
-        }
-
-        .clear-btn:hover {
-            background: #5a6268;
-        }
-
-        .save-btn {
-            background: #10b981;
-            color: white;
-        }
-
-        .save-btn:hover {
-            background: #059669;
-        }
-
-        .no-packages {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            font-size: 1.2em;
-            background: white;
-            border-radius: 15px;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-
-        .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-signed {
-            background: #d1fae5;
-            color: #065f46;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>📦 Packages Awaiting Signature</h1>
-            <div class="user-info">Welcome, <span id="username">User</span></div>
-            <div class="nav-buttons">
-                <button class="nav-btn" onclick="window.location.href='dashboard.html'">🏠 Dashboard</button>
-                <button class="nav-btn" onclick="window.location.href='logout.html'">🚪 Logout</button>
+    const pkgListEl = document.getElementById('detailPackageList');
+    const pkgs = packagesByCustomer[pickup.customer_id] || [];
+    if (!pkgs.length) {
+      pkgListEl.innerHTML = '<div class="small-text">No signed packages recorded for this customer on file.</div>';
+    } else {
+      pkgListEl.innerHTML = pkgs.map(pkg => {
+        const statusClass = (pkg.status || '').toLowerCase() === 'signed' ? 'signed' : '';
+        const created = pkg.created_at ? new Date(pkg.created_at).toLocaleDateString() : '';
+        return `
+          <div class="package-item">
+            <div class="package-item-header">
+              <span class="pkg-name">${pkg.courier || ''}</span>
             </div>
-        </div>
+            <div>
+              <div class="pkg-meta">Tracking: ${pkg.tracking || '(none)'}</div>
+              <div class="pkg-meta">Name: ${pkg.name || ''}</div>
+            </div>
+            <div>
+              <div class="pkg-meta">Phone: ${pkg.phone || '(none)'}</div>
+              <div class="pkg-meta">Received: ${created}</div>
+            </div>
+            <div>
+              <div class="pkg-status ${statusClass}">${pkg.status || 'pending'}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
-        <div class="search-section">
-            <h2>Search Packages</h2>
-            <input type="text" id="searchInput" class="search-box" placeholder="Search by name, tracking, phone, or postal...">
-            <button class="load-btn" onclick="loadPackages()">📋 Load Packages</button>
-        </div>
+    loadSignatureImage(pickup.pickup_signature);
+  }
 
-        <div id="packagesContainer"></div>
-    </div>
+  function initCanvas() {
+    signatureCanvas = document.getElementById('signatureCanvas');
+    signatureCtx = signatureCanvas.getContext('2d');
 
-    <script>
-        // Check authentication
-        const currentUser = sessionStorage.getItem('currentUser');
-        if (!currentUser) {
-            window.location.href = 'index.html';
-        } else {
-            document.getElementById('username').textContent = currentUser;
-        }
+    function resizeCanvas() {
+      const rect = signatureCanvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      signatureCanvas.width = rect.width * ratio;
+      signatureCanvas.height = rect.height * ratio;
+      signatureCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      redrawSignature();
+    }
 
-        let packages = [];
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+  }
 
-        async function loadPackages() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            
-            try {
-                const response = await fetch('/api/packages/pending');
-                if (response.ok) {
-                    packages = await response.json();
-                    
-                    // Filter packages based on search
-                    if (searchTerm) {
-                        packages = packages.filter(pkg => 
-                            pkg.name?.toLowerCase().includes(searchTerm) ||
-                            pkg.tracking?.toLowerCase().includes(searchTerm) ||
-                            pkg.phone?.toLowerCase().includes(searchTerm) ||
-                            pkg.postal?.toLowerCase().includes(searchTerm)
-                        );
-                    }
-                    
-                    displayPackages(packages);
-                } else {
-                    alert('Failed to load packages');
-                }
-            } catch (error) {
-                console.error('Error loading packages:', error);
-                alert('Error loading packages. Please try again.');
-            }
-        }
+  function redrawSignature() {
+    if (!signatureCtx || !signatureCanvas) return;
+    signatureCtx.fillStyle = '#020617';
+    signatureCtx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
 
-        function displayPackages(pkgs) {
-            const container = document.getElementById('packagesContainer');
-            
-            if (pkgs.length === 0) {
-                container.innerHTML = '<div class="no-packages">No packages found awaiting signature</div>';
-                return;
-            }
+    if (!selectedPickup || !selectedPickup.pickup_signature) {
+      signatureCtx.fillStyle = 'rgba(148,163,184,0.8)';
+      signatureCtx.font = '12px system-ui';
+      signatureCtx.fillText('Select a pickup to view signature', 12, 24);
+    }
+  }
 
-            const grid = document.createElement('div');
-            grid.className = 'packages-grid';
+  function loadSignatureImage(signatureData) {
+    if (!signatureCtx || !signatureCanvas) return;
+    signatureCtx.fillStyle = '#020617';
+    signatureCtx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
 
-            pkgs.forEach(pkg => {
-                const card = createPackageCard(pkg);
-                grid.appendChild(card);
-            });
+    if (!signatureData) {
+      document.getElementById('signatureStatus').textContent = 'No signature image on record for this pickup.';
+      signatureCtx.fillStyle = 'rgba(248,113,113,0.9)';
+      signatureCtx.font = '12px system-ui';
+      signatureCtx.fillText('No signature image on record', 12, 24);
+      return;
+    }
 
-            container.innerHTML = '';
-            container.appendChild(grid);
-        }
+    document.getElementById('signatureStatus').textContent = 'Signature captured at time of pickup';
 
-        function createPackageCard(pkg) {
-            const card = document.createElement('div');
-            card.className = 'package-card';
-            card.innerHTML = `
-                <img src="${pkg.labelImage || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>'}" 
-                     class="package-image" alt="Package Label">
-                <div class="package-info"><strong>Courier:</strong> ${pkg.courier}</div>
-                <div class="package-info"><strong>Name:</strong> ${pkg.name}</div>
-                <div class="package-info"><strong>Tracking:</strong> ${pkg.tracking}</div>
-                <div class="package-info"><strong>Phone:</strong> ${pkg.phone || 'N/A'}</div>
-                <div class="package-info"><strong>Postal:</strong> ${pkg.postal}</div>
-                <div class="package-info"><strong>Added:</strong> ${new Date(pkg.created_at).toLocaleString()}</div>
-                <span class="status-badge status-pending">⏳ Awaiting Signature</span>
-                
-                <div class="signature-section">
-                    <strong>Customer Signature:</strong>
-                    anvas id="canvas-${pkg.id}" class="signature-canvas" width="300" height="150"></canvas>
-                    <div class="signature-buttons">
-                        <button class="clear-btn" onclick="clearSignature(${pkg.id})">🗑️ Clear</button>
-                        <button class="save-btn" onclick="saveSignature(${pkg.id})">✅ Save & Archive</button>
-                    </div>
-                </div>
-            `;
+    const img = new Image();
+    img.onload = () => {
+      const canvasWidth = signatureCanvas.width;
+      const canvasHeight = signatureCanvas.height;
+      const scale = Math.min(canvasWidth / img.width, canvasHeight / img.height);
+      const x = (canvasWidth - img.width * scale) / 2;
+      const y = (canvasHeight - img.height * scale) / 2;
+      signatureCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
+    };
+    img.src = signatureData;
+  }
 
-            // Initialize canvas
-            setTimeout(() => initCanvas(pkg.id), 100);
+  function downloadSignature() {
+    if (!selectedPickup || !selectedPickup.pickup_signature) {
+      alert('No signature image available to download.');
+      return;
+    }
 
-            return card;
-        }
+    const a = document.createElement('a');
+    a.href = selectedPickup.pickup_signature;
+    const ts = selectedPickup.timestamp
+      ? new Date(selectedPickup.timestamp).toISOString().replace(/[:.]/g, '-')
+      : 'unknown';
+    a.download = `signature_pickup_${selectedPickup.id}_${ts}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
 
-        const canvasStates = {};
+  function printSignature() {
+    if (!selectedPickup || !selectedPickup.pickup_signature) {
+      alert('No signature image available to print.');
+      return;
+    }
 
-        function initCanvas(pkgId) {
-            const canvas = document.getElementById(`canvas-${pkgId}`);
-            if (!canvas) return;
+    const printWindow = window.open('', '_blank');
+    const ts = selectedPickup.timestamp
+      ? new Date(selectedPickup.timestamp).toLocaleString()
+      : 'Unknown';
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Pickup #${selectedPickup.id} - Signature</title>
+          <style>
+            body { font-family: system-ui, sans-serif; padding: 20px; }
+            h1 { font-size: 20px; margin-bottom: 5px; }
+            h2 { font-size: 16px; margin-top: 15px; }
+            p { margin: 2px 0; }
+            img { border: 1px solid #999; margin-top: 10px; max-width: 100%; }
+          </style>
+        </head>
+        <body>
+          <h1>Pickup #${selectedPickup.id}</h1>
+          <p><strong>Customer:</strong> ${selectedPickup.customer_name || ''}</p>
+          <p><strong>Pickup name:</strong> ${selectedPickup.pickup_name || ''}</p>
+          <p><strong>ID type:</strong> ${selectedPickup.pickup_id_type || ''}</p>
+          <p><strong>ID number:</strong> ${selectedPickup.pickup_id_number || ''}</p>
+          <p><strong>Timestamp:</strong> ${ts}</p>
 
-            const ctx = canvas.getContext('2d');
-            let drawing = false;
+          <h2>Signature</h2>
+          <img src="${selectedPickup.pickup_signature}" alt="Signature">
 
-            canvasStates[pkgId] = { canvas, ctx, drawing: false };
+          <h2>Packages</h2>
+          <ul>
+            ${(packagesByCustomer[selectedPickup.customer_id] || []).map(pkg => `
+              <li>${pkg.courier || ''} · Tracking: ${pkg.tracking || '(none)'} · Name: ${pkg.name || ''}</li>
+            `).join('')}
+          </ul>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
 
-            canvas.addEventListener('mousedown', (e) => startDrawing(e, pkgId));
-            canvas.addEventListener('mousemove', (e) => draw(e, pkgId));
-            canvas.addEventListener('mouseup', () => stopDrawing(pkgId));
-            canvas.addEventListener('mouseout', () => stopDrawing(pkgId));
+  window.applyPickupFilter = applyPickupFilter;
+  window.downloadSignature = downloadSignature;
+  window.printSignature = printSignature;
+  window.logout = logout;
 
-            // Touch support
-            canvas.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const mouseEvent = new MouseEvent('mousedown', {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY
-                });
-                canvas.dispatchEvent(mouseEvent);
-            });
+  document.addEventListener('DOMContentLoaded', () => {
+    const user = JSON.parse(sessionStorage.getItem('savUser') || 'null');
+    const userInfoEl = document.getElementById('userInfo');
+    if (user && user.username) {
+      userInfoEl.textContent = `Signed in as ${user.username} (${user.role || 'staff'})`;
+    }
 
-            canvas.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const mouseEvent = new MouseEvent('mousemove', {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY
-                });
-                canvas.dispatchEvent(mouseEvent);
-            });
-
-            canvas.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                const mouseEvent = new MouseEvent('mouseup', {});
-                canvas.dispatchEvent(mouseEvent);
-            });
-        }
-
-        function startDrawing(e, pkgId) {
-            const state = canvasStates[pkgId];
-            if (!state) return;
-
-            state.drawing = true;
-            const rect = state.canvas.getBoundingClientRect();
-            state.ctx.beginPath();
-            state.ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-        }
-
-        function draw(e, pkgId) {
-            const state = canvasStates[pkgId];
-            if (!state || !state.drawing) return;
-
-            const rect = state.canvas.getBoundingClientRect();
-            state.ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-            state.ctx.strokeStyle = '#000';
-            state.ctx.lineWidth = 2;
-            state.ctx.lineCap = 'round';
-            state.ctx.stroke();
-        }
-
-        function stopDrawing(pkgId) {
-            const state = canvasStates[pkgId];
-            if (state) {
-                state.drawing = false;
-            }
-        }
-
-        function clearSignature(pkgId) {
-            const state = canvasStates[pkgId];
-            if (state) {
-                state.ctx.clearRect(0, 0, state.canvas.width, state.canvas.height);
-            }
-        }
-
-        async function saveSignature(pkgId) {
-            const state = canvasStates[pkgId];
-            if (!state) return;
-
-            // Get signature as base64
-            const signatureData = state.canvas.toDataURL('image/png');
-
-            // Check if signature is empty
-            const blankCanvas = document.createElement('canvas');
-            blankCanvas.width = state.canvas.width;
-            blankCanvas.height = state.canvas.height;
-            if (signatureData === blankCanvas.toDataURL('image/png')) {
-                alert('Please provide a signature before saving');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/packages/${pkgId}/sign`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.
+    initCanvas();
+    fetchPickups();
+  });
+</script>

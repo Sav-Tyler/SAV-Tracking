@@ -1,429 +1,932 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Superior Audio & Video - Package Tracking</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .main-container {
-            max-width: 900px;
-            max-width: 900px;            width: 90%;            background: white;            border-radius: 20px;            box-shadow: 0 20px 60px rgba(0,0,0,0.3);            overflow: hidden;
-        }
-        .header {
-            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-            color: white;
-                        padding-top: 60px; /* Space for Staff Login button */                        text-align: center;            position: relative;
-        }
+  <meta charset="UTF-8">
+  <title>SAV Package Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --primary: #0891b2;
+      --primary-dark: #0e7490;
+      --accent: #10b981;
+      --danger: #ef4444;
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --border-soft: #e5e7eb;
+      --shadow-soft: 0 10px 25px rgba(15, 23, 42, 0.08);
+      --shadow-strong: 0 20px 45px rgba(15, 23, 42, 0.12);
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --radius-pill: 999px;
+    }
 
-        .header h1 {
-            margin: 0;
-            font-size: 2.5em;            }        .staff-menu {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-        }
-        .staff-btn {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border: 2px solid white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-        .staff-btn:hover {
-            background: white;
-            color: #0891b2;
-        }
-        .tracking-section {
-            padding: 60px 40px;
-            text-align: center;
-        }
-        .tracking-section h2 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2em;
-        }
-        .tracking-input {
-            width: 100%;
-            padding: 20px;
-            font-size: 1.3em;
-            border: 3px solid #ddd;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
-        }
-        .tracking-input:focus {
-            outline: none;
-            border-color: #0891b2;
-        }
-        .track-btn {
-            width: 100%;
-            padding: 20px;
-            font-size: 1.3em;
-            background: #0891b2;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-        .track-btn:hover {
-            background: #0e7490;
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-        #trackingResult {
-            margin-top: 30px;
-        }
-        .package-result {
-            background: #f0f9ff;
-            border: 3px solid #0891b2;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: left;
-        }
-        .package-result h3 {
-            color: #0891b2;
-            margin-top: 0;
-        }
-        .info-line {
-            padding: 10px 0;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .info-line:last-child {
-            border-bottom: none;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 10px 25px;
-            border-radius: 25px;
-            font-weight: bold;
-            margin-top: 15px;
-        }
-        .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-        .status-signed {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        .error-message {
-            background: #fee2e2;
-            border: 3px solid #ef4444;
-            border-radius: 12px;
-            padding: 20px;
-            color: #991b1b;
-        }
-        
-        /* Staff Login Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal.active {
-            display: flex;
-        }
-        .modal-content {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        .modal-header h2 {
-            margin: 0;
-            color: #333;
-        }
-        .close-btn {
-            background: none;
-            border: none;
-            font-size: 2em;
-            cursor: pointer;
-            color: #999;
-        }
-        .close-btn:hover {
-            color: #333;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #666;
-            font-weight: bold;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1em;
-            box-sizing: border-box;
-        }
-        .form-group input:focus {
-            outline: none;
-            border-color: #0891b2;
-        }
-        .login-btn {
-            width: 100%;
-            padding: 15px;
-            background: #0891b2;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .login-btn:hover {
-            background: #0e7490;
-        }
-    </style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, -system-ui, sans-serif;
+      background: radial-gradient(circle at top left, #0f172a 0, #020617 55%);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 1100px;
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 55%),
+                  radial-gradient(circle at top right, rgba(16, 185, 129, 0.12), transparent 60%),
+                  linear-gradient(135deg, #020617, #020617);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: var(--shadow-strong);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      position: relative;
+      isolation: isolate;
+    }
+
+    .app-shell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 10% 0, rgba(56, 189, 248, 0.22), transparent 55%);
+      mix-blend-mode: soft-light;
+      pointer-events: none;
+      opacity: 0.9;
+    }
+
+    .app-shell-inner {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      min-height: 620px;
+    }
+
+    .brand-panel {
+      width: 40%;
+      background: radial-gradient(circle at top left, #0f172a 0, #020617 50%),
+                  radial-gradient(circle at 120% 0, #0f172a 0, #020617 55%);
+      color: white;
+      padding: 28px 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 1px solid rgba(148, 163, 184, 0.4);
+    }
+
+    .brand-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      background: conic-gradient(from 210deg, #06b6d4, #22c55e, #38bdf8, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #020617;
+      font-weight: 800;
+      font-size: 20px;
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.95), 0 18px 35px rgba(0, 0, 0, 0.6);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-subtitle {
+      font-size: 12px;
+      opacity: 0.76;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-badge span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.17);
+      color: #4ade80;
+      font-size: 11px;
+    }
+
+    .brand-main {
+      margin-bottom: 22px;
+    }
+
+    .headline-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      color: rgba(148, 163, 184, 0.75);
+      margin-bottom: 8px;
+    }
+
+    .headline {
+      font-size: 26px;
+      line-height: 1.28;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      margin-bottom: 10px;
+    }
+
+    .headline span {
+      color: #22c55e;
+    }
+
+    .headline-sub {
+      font-size: 13px;
+      color: rgba(209, 213, 219, 0.92);
+      max-width: 260px;
+    }
+
+    .brand-pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .brand-pill {
+      font-size: 11px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.75);
+      color: rgba(209, 213, 219, 0.9);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-pill i {
+      font-size: 13px;
+    }
+
+    .brand-metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .metric-card {
+      padding: 11px 12px;
+      border-radius: 14px;
+      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.9);
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.9);
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .metric-value span {
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.85);
+      font-weight: 500;
+    }
+
+    .metric-footnote {
+      font-size: 10px;
+      color: rgba(148, 163, 184, 0.85);
+      margin-top: 4px;
+    }
+
+    .brand-footer {
+      margin-top: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.9);
+    }
+
+    .brand-footer span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .brand-footer small {
+      opacity: 0.75;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3);
+    }
+
+    .powered-by {
+      opacity: 0.75;
+    }
+
+    .powered-by strong {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .auth-panel {
+      width: 60%;
+      padding: 28px 26px;
+      background: radial-gradient(circle at 0 0, rgba(248, 250, 252, 0.1), transparent 55%),
+                  radial-gradient(circle at 150% 0, rgba(56, 189, 248, 0.12), transparent 60%),
+                  linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
+      position: relative;
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .auth-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(56, 189, 248, 0.07),
+        transparent 30%,
+        transparent 70%,
+        rgba(56, 189, 248, 0.06)
+      );
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    .auth-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-header {
+      display: flex;
+      justify-content: flex-end;
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.9);
+      margin-bottom: 12px;
+    }
+
+    .session-indicator {
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.85);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .session-indicator span {
+      display: inline-flex;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
+    }
+
+    .auth-main-title {
+      margin-bottom: 6px;
+    }
+
+    .auth-main-title h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: #f9fafb;
+    }
+
+    .auth-main-title h1 span {
+      color: #22c55e;
+    }
+
+    .auth-subtitle {
+      font-size: 12px;
+      color: rgba(156, 163, 175, 0.95);
+      max-width: 320px;
+      margin-bottom: 18px;
+    }
+
+    .tab-row {
+      display: inline-flex;
+      padding: 3px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.65);
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 6px 12px;
+      border: none;
+      background: transparent;
+      color: rgba(148, 163, 184, 0.9);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+    }
+
+    .tab-btn span {
+      font-size: 13px;
+    }
+
+    .tab-btn.active {
+      background: radial-gradient(circle at top left, #22c55e, #0ea5e9);
+      color: #020617;
+      font-weight: 600;
+    }
+
+    .auth-body {
+      margin-bottom: 18px;
+    }
+
+    .auth-card {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 18px;
+      padding: 18px 18px 16px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9);
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: rgba(209, 213, 219, 0.98);
+      margin-bottom: 6px;
+    }
+
+    .form-label span.helper {
+      font-size: 11px;
+      color: rgba(156, 163, 175, 0.95);
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      color: rgba(148, 163, 184, 0.95);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 9px 10px 9px 30px;
+      border-radius: 11px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      background: rgba(15, 23, 42, 0.96);
+      color: #e5e7eb;
+      font-size: 13px;
+      outline: none;
+      transition: all 0.18s ease;
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+    }
+
+    .form-input::placeholder {
+      color: rgba(107, 114, 128, 0.9);
+    }
+
+    .form-input:focus {
+      border-color: #0ea5e9;
+      box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.8), 0 0 0 4px rgba(14, 165, 233, 0.35);
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: none;
+      color: rgba(148, 163, 184, 0.95);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 2px;
+    }
+
+    .form-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.95);
+      margin-top: 2px;
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .checkbox-label input {
+      width: 13px;
+      height: 13px;
+      border-radius: 3px;
+      border: 1px solid rgba(107, 114, 128, 0.95);
+      background: rgba(15, 23, 42, 0.96);
+    }
+
+    .checkbox-label span {
+      font-size: 11px;
+    }
+
+    .link-inline {
+      color: #38bdf8;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .link-inline:hover {
+      text-decoration: underline;
+    }
+
+    .submit-row {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .primary-btn {
+      flex: 1;
+      border-radius: 999px;
+      border: none;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(135deg, #22c55e, #0ea5e9);
+      color: #020617;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 12px 30px rgba(34, 197, 94, 0.4);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 40px rgba(34, 197, 94, 0.55);
+      filter: brightness(1.05);
+    }
+
+    .primary-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 9px 20px rgba(34, 197, 94, 0.4);
+    }
+
+    .primary-btn span.icon {
+      font-size: 15px;
+    }
+
+    .hint-text {
+      font-size: 10px;
+      color: rgba(156, 163, 175, 0.98);
+      max-width: 200px;
+    }
+
+    .hint-text strong {
+      color: #e5e7eb;
+      font-weight: 600;
+    }
+
+    .divider {
+      margin: 16px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(107, 114, 128, 0.95);
+      font-size: 11px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: radial-gradient(circle, rgba(148, 163, 184, 0.6), transparent 70%);
+    }
+
+    .shortcut-row {
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.95);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .kbd {
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      background: rgba(15, 23, 42, 0.92);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 10px;
+      color: rgba(156, 163, 175, 0.98);
+    }
+
+    .auth-footer {
+      position: relative;
+      z-index: 1;
+      margin-top: 8px;
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.95);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .auth-footer a {
+      color: #38bdf8;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .auth-footer a:hover {
+      text-decoration: underline;
+    }
+
+    .version-pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      background: rgba(15, 23, 42, 0.95);
+      font-size: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .version-pill span {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+
+    @media (max-width: 900px) {
+      .app-shell-inner {
+        flex-direction: column;
+      }
+
+      .brand-panel,
+      .auth-panel {
+        width: 100%;
+      }
+
+      .brand-panel {
+        border-right: none;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 12px;
+      }
+
+      .app-shell {
+        border-radius: 22px;
+      }
+
+      .brand-panel {
+        padding: 22px 20px;
+      }
+
+      .auth-panel {
+        padding: 22px 20px 18px;
+      }
+    }
+  </style>
 </head>
-<body class="index-page">
-   <div class="hero-wrapper">
-    <img id="companyLogo" src="default-logo.png" alt="Company Logo" style="max-width:400px; height:auto;">
-
-    <p id="indexTagline" style="margin:0; font-size:1rem; text-align:center;">
-        Track your packages with Superior Audio & Video
-    </p>
-
-    <div class="tracking-card">
-        <!-- keep all existing card content inside, just ensure the top bar has tracking-header + staff-bar classes -->
-        <div class="tracking-header">
-            <div class="staff-bar">
-                <!-- your existing Staff Login row/button here -->
+<body>
+  <div class="app-shell">
+    <div class="app-shell-inner">
+      <!-- Brand Panel -->
+      <aside class="brand-panel">
+        <div>
+          <div class="brand-top">
+            <div class="brand-lockup">
+              <div class="brand-logo">S</div>
+              <div>
+                <div class="brand-title">Superior Audio &amp; Video</div>
+                <div class="brand-subtitle">Customer Package Manager</div>
+              </div>
             </div>
-            <!-- existing "📦 Package Tracking" title and subtitle with class="tracking-title"/"tracking-subtitle" -->
-        </div>
+            <div class="brand-badge">
+              <span>●</span>
+              In-store pickup
+            </div>
+          </div>
 
-        <!-- tracking input, button, etc. -->
-    </div>
-</div>   
-        <div class="tracking-section">
-            <h2>Track Your Package</h2>
-            <input type="text" id="trackingInput" class="tracking-input" placeholder="Enter your tracking number..." />
-            <button class="track-btn" onclick="trackPackage()">🔍 Track Package</button>
-            <div id="trackingResult"></div>
-        </div>
-    </div>
-
-    <!-- Staff Login Modal -->
-    <div id="staffModal" class="modal">
-        <div class="modal-content">
-            <button type="button" class="modal-close" onclick="closeStaffLogin()">×</button>
-            <div class="login-header">
-                <span class="login-lock-icon">🔒</span>
-                <span class="login-title">Staff Login</span>
+          <div class="brand-main">
+            <div class="headline-kicker">STAFF PORTAL</div>
+            <div class="headline">
+              Unified package intake<br>
+              <span>and customer pickups.</span>
+            </div>
+            <div class="headline-sub">
+              Fast OCR intake and accurate signatures for your customers’ shipments — designed for in-store kiosks.
             </div>
 
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" id="staffUsername" placeholder="Enter username">
+            <div class="brand-pill-row">
+              <div class="brand-pill"><i>⚡</i> OCR label intake</div>
+              <div class="brand-pill"><i>✍️</i> Digital signatures</div>
+              <div class="brand-pill"><i>📦</i> Multi-courier tracking</div>
+              <div class="brand-pill"><i>🕒</i> 5‑day hold metrics</div>
             </div>
 
-            <div class="form-group">
-                <label>Password</label>
-                <div class="password-row">
-                    <input type="password" id="staffPassword" placeholder="Enter password">
-                    <button type="button" class="show-password-btn" onclick="togglePassword()" title="Show/Hide Password">👁️</button>
+            <div class="brand-metrics">
+              <div class="metric-card">
+                <div class="metric-label">Today’s Intake</div>
+                <div class="metric-value">
+                  <span id="metric-intake">0</span>
+                  <span>labels scanned</span>
                 </div>
+                <div class="metric-footnote" id="metric-intake-sub">
+                  Login to begin OCR intake.
+                </div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Ready for Pickup</div>
+                <div class="metric-value">
+                  <span id="metric-ready">0</span>
+                  <span>packages</span>
+                </div>
+                <div class="metric-footnote" id="metric-ready-sub">
+                  Dashboard shows last 5 days by courier.
+                </div>
+              </div>
             </div>
-
-            <button class="login-btn" onclick="staffLogin()">Login</button>
+          </div>
         </div>
+
+        <div class="brand-footer">
+          <span><span class="status-dot"></span> POS station ready</span>
+          <span class="powered-by">Powered by <strong>Superior Audio &amp; Video</strong></span>
+        </div>
+      </aside>
+
+      <!-- Auth Panel -->
+      <main class="auth-panel">
+        <div class="auth-inner">
+          <div class="auth-header">
+            <div class="session-indicator">
+              <span></span>
+              Secure staff login
+            </div>
+          </div>
+
+          <div class="auth-main-title">
+            <h1>Sign in to <span>SAV</span> dashboard</h1>
+          </div>
+          <div class="auth-subtitle">
+            Use your staff credentials to access the package manager, customer pickups, and shipping summary.
+          </div>
+
+          <div class="tab-row" aria-label="Auth mode toggle">
+            <button class="tab-btn active" type="button">
+              <span>👤</span> Staff login
+            </button>
+            <button class="tab-btn" type="button" disabled style="opacity:0.5; cursor:not-allowed;">
+              <span>👑</span> Admin console
+            </button>
+          </div>
+
+          <section class="auth-body">
+            <div class="auth-card">
+              <form id="loginForm">
+                <div class="form-group">
+                  <label class="form-label" for="username">
+                    Username
+                    <span class="helper">Ask manager if you don't have one</span>
+                  </label>
+                  <div class="input-wrapper">
+                    <span class="input-icon">👤</span>
+                    <input
+                      type="text"
+                      id="username"
+                      class="form-input"
+                      placeholder="e.g. sav_clerk"
+                      autocomplete="username"
+                      required
+                    >
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="password">
+                    Password
+                    <span class="helper">Never share this with customers</span>
+                  </label>
+                  <div class="input-wrapper">
+                    <span class="input-icon">🔒</span>
+                    <input
+                      type="password"
+                      id="password"
+                      class="form-input"
+                      placeholder="Enter password"
+                      autocomplete="current-password"
+                      required
+                    >
+                    <button
+                      type="button"
+                      class="password-toggle"
+                      aria-label="Toggle password visibility"
+                      onclick="togglePasswordVisibility()"
+                    >
+                      Show
+                    </button>
+                  </div>
+                  <div class="form-row">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="rememberMe">
+                      <span>Remember on this station</span>
+                    </label>
+                    <a href="#" class="link-inline" onclick="alert('Contact your manager to reset your password.')">
+                      Forgot password?
+                    </a>
+                  </div>
+                </div>
+
+                <div class="submit-row">
+                  <button type="submit" class="primary-btn">
+                    <span class="icon">➡️</span>
+                    Sign in to dashboard
+                  </button>
+                  <div class="hint-text">
+                    Tip: Use <strong>Tab ↹</strong> to move between fields, <strong>Enter ↵</strong> to submit.
+                  </div>
+                </div>
+              </form>
+
+              <div class="divider">
+                Or use these shortcuts
+              </div>
+
+              <div class="shortcut-row">
+                <span>
+                  Staff: <span class="kbd">sav_clerk / demo123</span>
+                </span>
+                <span>
+                  Admin: <span class="kbd">admin / demo123</span>
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <footer class="auth-footer">
+          <div>
+            Questions? <a href="#" onclick="alert('See your manager or system administrator for help.')">View quick start guide</a>
+          </div>
+          <div class="version-pill">
+            <span></span>
+            v1.0 · Local kiosk
+          </div>
+        </footer>
+      </main>
     </div>
+  </div>
 
-
-    <script>
-        const API_URL = 'http://localhost:5000/api';
-
-        async function trackPackage() {
-            const tracking = document.getElementById('trackingInput').value.trim();
-            const resultDiv = document.getElementById('trackingResult');
-            
-            if (!tracking) {
-                resultDiv.innerHTML = '<div class="error-message">Please enter a tracking number</div>';
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${API_URL}/track/${tracking}`);
-                
-                if (response.ok) {
-                    const pkg = await response.json();
-                    const statusClass = pkg.status === 'signed' ? 'status-signed' : 'status-pending';
-                    const statusText = pkg.status === 'signed' ? '✅ Delivered & Signed' : '📦 Available for Pickup';
-                    
-                    resultDiv.innerHTML = `
-                        <div class="package-result">
-                            <h3>📦 Package Found!</h3>
-                            <div class="info-line"><strong>Courier:</strong> ${pkg.courier}</div>
-                            <div class="info-line"><strong>Tracking Number:</strong> ${pkg.tracking}</div>
-                            <div class="info-line"><strong>Recipient:</strong> ${pkg.name}</div>
-                            <div class="info-line"><strong>Received:</strong> ${new Date(pkg.created_at).toLocaleString()}</div>
-                            ${pkg.signed_at ? `<div class="info-line"><strong>Picked Up:</strong> ${new Date(pkg.signed_at).toLocaleString()}</div>` : ''}
-                            <span class="status-badge ${statusClass}">${statusText}</span>
-                        </div>
-                    `;
-                } else {
-                    resultDiv.innerHTML = '<div class="error-message">❌ Package not found. Please check your tracking number and try again.</div>';
-                }
-            } catch (error) {
-                resultDiv.innerHTML = '<div class="error-message">❌ Error connecting to server. Please try again later.</div>';
-            }
-        }
-        
-        // Allow Enter key to search
-        document.getElementById('trackingInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') trackPackage();
-        });
-      
-        async function staffLogin() {
-            const username = document.getElementById('staffUsername').value;
-            const password = document.getElementById('staffPassword').value;
-            
-            if (!username || !password) {
-                alert('Please enter username and password');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${API_URL}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    sessionStorage.setItem('currentUser', data.username);
-                    sessionStorage.setItem('userRole', data.role);
-                    window.location.href = 'dashboard.html';
-                } else {
-                    alert('❌ Invalid credentials');
-                }
-            } catch (error) {
-                alert('❌ Error logging in. Please try again.');
-            }
-        }
-
-        // Close modal when clicking outside
-        document.getElementById('staffModal').addEventListener('click', function(e) {
-            if (e.target === this) closeStaffLogin();
-        });
-
-            // Toggle password visibility
-    function togglePassword() {
-        const passwordField = document.getElementById('staffPassword');
-        const button = event.target;
-        if (passwordField.type === 'password') {
-            passwordField.type = 'text';
-            button.innerHTML = '🚫'; // Closed eye
-        } else {
-            passwordField.type = 'password';
-            button.innerHTML = '👁️'; // Open eye
-        }
+  <script src="common.js"></script>
+  <script>
+    // Toggle password visibility
+    function togglePasswordVisibility() {
+      const input = document.getElementById('password');
+      const btn = document.querySelector('.password-toggle');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'Hide';
+      } else {
+        input.type = 'password';
+        btn.textContent = 'Show';
+      }
     }
-    </script>
-</div>
-<script src="auth.js"></script>
-<script>
-  async function loadPublicSettings() {
-    try {
-      const res = await fetch('/api/settings');
-      const settings = await res.json();
 
-      const logo = document.getElementById('companyLogo');
-      if (settings.logo_url && logo) {
-        logo.src = settings.logo_url;
+    // Prefill demo credentials (you can remove this in production)
+    document.addEventListener('DOMContentLoaded', () => {
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      usernameInput.value = 'sav_clerk';
+      passwordInput.value = 'demo123';
+
+      // Load simple metrics from localStorage (if any)
+      const packages = getPackages();
+      const today = new Date().toISOString().slice(0, 10);
+      const todaysIntake = packages.filter(p => (p.created_at || '').startsWith(today)).length;
+      const readyForPickup = packages.filter(p => (p.status || '').toLowerCase() === 'pending').length;
+
+      document.getElementById('metric-intake').textContent = todaysIntake;
+      document.getElementById('metric-ready').textContent = readyForPickup;
+
+      document.getElementById('metric-intake-sub').textContent =
+        todaysIntake > 0
+          ? 'Great work! Keep scanning labels.'
+          : 'Login and start your first intake batch.';
+      document.getElementById('metric-ready-sub').textContent =
+        readyForPickup > 0
+          ? 'Tap Customer Pickup in the dashboard to sign for releases.'
+          : 'No pending pickups right now.';
+    });
+
+    // Login form handler
+    const loginForm = document.getElementById('loginForm');
+    loginForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const rememberMe = document.getElementById('rememberMe').checked;
+
+      const user = authenticateUser(username, password);
+      if (!user) {
+        alert('Invalid username or password');
+        return;
       }
 
-      const taglineEl = document.getElementById('indexTagline');
-      if (settings.tagline && taglineEl) {
-        taglineEl.textContent = settings.tagline;
+      const sessionData = {
+        username: user.username,
+        role: user.role,
+        rememberMe
+      };
+
+      sessionStorage.setItem('savUser', JSON.stringify(sessionData));
+      if (rememberMe) {
+        localStorage.setItem('savUserRemember', JSON.stringify(sessionData));
+      } else {
+        localStorage.removeItem('savUserRemember');
       }
 
-      const root = document.documentElement;
-      if (settings.text_color) {
-        root.style.setProperty('--index-text-color', settings.text_color);
-      }
-      if (settings.header_bg_color) {
-        root.style.setProperty('--index-header-bg', settings.header_bg_color);
-      }
-      if (settings.page_bg_color) {
-        root.style.setProperty('--index-page-bg', settings.page_bg_color);
-      }
-      if (settings.tracking_bg_color) {
-        root.style.setProperty('--index-tracking-bg', settings.tracking_bg_color);
-      }
-      if (settings.staff_bar_bg_color) {
-        root.style.setProperty('--index-staff-bar-bg', settings.staff_bar_bg_color);
-      }
-    } catch (e) {
-      console.error('Failed to load settings', e);
-    }
-  }
-
-	  function openStaffLogin() {
-       const modal = document.getElementById('staffModal');
-       if (modal) modal.classList.add('active');
-}
-      function closeStaffLogin() {
-       const modal = document.getElementById('staffModal');
-       if (modal) modal.classList.remove('active');
-}
-
-      document.addEventListener('DOMContentLoaded', loadPublicSettings);
-    </script>
+      window.location.href = 'dashboard.html';
+    });
+  </script>
 </body>
 </html>
-
-
-
-
- 
-
-
-
-
-
-
-
-
-
-
-
-

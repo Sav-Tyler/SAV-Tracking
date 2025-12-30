@@ -1,319 +1,461 @@
-let pendingPackages = [], currentBatchPackages = [];
-const API_URL = 'http://localhost:5000/api'; // Update this to your server URL when deployed
+// dashboard.js
+// OCR intake + API-backed package management + 5‑day warnings + pickup/signatures
+
+import {
+  apiGet,
+  apiPost,
+  cachePackages,
+  readCachedPackages,
+} from './common.js';
+// adjust imports if you name things differently
+import { processLabelFiles } from './ocr.js';
+import { saveSignature as apiSaveSignature } from './signatures.js';
+
+let pendingPackages = [];
+let selectedPackages = [];
+let signatureCanvas, signatureCtx;
+
+// -------- OCR intake (client-side via ocr.js, then POST /api/packages) --------
 
 async function processImages() {
-    try {
-        const files = document.getElementById('labelImages').files;
-        if (!files.length) return alert('❌ Select images');
-        
-        const courier = document.getElementById('courier').value;
-        document.getElementById('processing').innerHTML = '⏳ Processing...';
-        pendingPackages = [];
-        
-        for (let i = 0; i < files.length; i++) {
-            const f = files[i];
-            
-            // Convert image to base64 for storage and processing
-            const reader = new FileReader();
-            const imageData = await new Promise((resolve) => {
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(f);
-            });
-            
-            document.getElementById('processing').innerHTML = '⏳ ' + (i + 1) + '/' + files.length + ': ' + f.name + '...';
-            
-            try {
-                // Send to server for PaddleOCR processing
-                const response = await fetch(`${API_URL}/process`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        image: imageData,
-                        courier: courier
-                    })
-                });
-                
-                if (!response.ok) throw new Error('Server processing failed');
-                
-                const result = await response.json();
-let pendingPackages = [], currentBatchPackages = [];
-const API_URL = 'http://localhost:5000/api';
-
-async function processImages() {
-    try {
-        const files = document.getElementById('labelImages').files;
-        if (!files.length) return alert('❌ Select images');
-        
-        const courier = document.getElementById('courier').value;
-        document.getElementById('processing').innerHTML = '⏳ Processing...';
-        pendingPackages = [];
-        
-        for (let i = 0; i < files.length; i++) {
-            const f = files[i];
-            
-            // Convert image to base64
-            const reader = new FileReader();
-            const imageData = await new Promise((resolve) => {
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(f);
-            });
-            
-            document.getElementById('processing').innerHTML = '⏳ ' + (i + 1) + '/' + files.length + ': ' + f.name + '...';
-            
-            try {
-                // Send to server for PaddleOCR processing
-                const response = await fetch(`${API_URL}/process`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        image: imageData,
-                        courier: courier
-                    })
-                });
-                
-                if (!response.ok) throw new Error('Server processing failed');
-                
-                const result = await response.json();
-                
-                const pkg = {
-                    id: Date.now() + Math.random(),
-                    courier,
-                    name: result.name || '',
-                    tracking: result.tracking || '',
-                    phone: result.phone || '',
-                    postal: result.postal || '',
-                    labelImage: imageData,
-                    missingFields: result.missing_fields || []
-                };
-                
-                pendingPackages.push(pkg);
-            } catch (err) {
-                console.error('OCR Error:', err);
-                const pkg = {
-                    id: Date.now() + Math.random(),
-                    courier,
-                    name: '',
-                    tracking: '',
-                    phone: '',
-                    postal: '',
-                    labelImage: imageData,
-                    missingFields: ['Name', 'Tracking', 'Postal']
-                };
-                pendingPackages.push(pkg);
-            }
-        }
-        
-        showPendingPackages();
-        document.getElementById('processing').innerHTML = '✅ Done: ' + pendingPackages.length;
-        document.getElementById('continueOrFinish').classList.remove('hidden');
-        
-    } catch (err) {
-        console.error('Fatal:', err);
-        alert('❌ Error: ' + err.message);
-        document.getElementById('processing').innerHTML = '❌ Error';
+  try {
+    const fileInput = document.getElementById('labelImages');
+    const files = Array.from(fileInput.files || []);
+    if (!files.length) {
+      alert('❌ Select images');
+      return;
     }
+
+    const courier = document.getElementById('courier').value;
+    const processingEl = document.getElementById('processing');
+    processingEl.textContent = '⏳ Processing...';
+
+    pendingPackages = [];
+
+    // OCR in-browser via ocr.js
+    const ocrPackages = await processLabelFiles(files, courier);
+
+    const nowIso = new Date().toISOString();
+    pendingPackages = ocrPackages.map(p => ({
+      courier: p.courier || courier,
+      tracking: p.tracking || '',
+      name: p.name || '',
+      phone: p.phone || '',
+      postal: p.postal || '',
+      label_image: p.label_image || p.labelImage || '',
+      status: 'pending',
+      created_at: p.created_at || nowIso,
+      signed_at: p.signed_at || null,
+      weight: p.weight || '',
+      service: p.service || '',
+      raw_ocr: p.raw_ocr || '',
+    }));
+
+    showPendingPackages();
+    processingEl.textContent = '✅ Done: ' + pendingPackages.length;
+    document.getElementById('continueOrFinish').classList.remove('hidden');
+  } catch (err) {
+    console.error('Fatal:', err);
+    alert('❌ Error: ' + err.message);
+    document.getElementById('processing').textContent = '❌ Error';
+  }
 }
 
 function showPendingPackages() {
-    const c = document.getElementById('pendingPackages');
-    c.innerHTML = pendingPackages.map((p, i) => `
-        <div class="package-card" style="border:2px solid ${p.missingFields.length ? '#dc3545' : '#28a745'}">
-            <div style="display:grid;grid-template-columns:100px 1fr;gap:10px">
-                <img src="${p.labelImage}" width="100" style="border-radius:8px">
-                <div>
-                    <p><strong>Courier:</strong> ${p.courier}</p>
-                    <p><strong>Name:</strong> <input type="text" value="${p.name || ''}" id="name_${i}" style="width:200px;padding:4px"></p>
-                    <p><strong>Tracking:</strong> <input type="text" value="${p.tracking || ''}" id="track_${i}" style="width:200px;padding:4px"></p>
-                    <p><strong>Phone:</strong> <input type="text" value="${p.phone || ''}" id="phone_${i}" style="width:150px;padding:4px"></p>
-                    <p><strong>Postal:</strong> <input type="text" value="${p.postal || ''}" id="postal_${i}" style="width:100px;padding:4px"></p>
-                    ${p.missingFields.length ? `<p style="background:#f8d7da;padding:8px;border-radius:6px;color:#721c24">⚠️ Missing: ${p.missingFields.join(', ')}</p>` : ''}
-                    <div class="btn-group">
-                        <button onclick="savePackageFromForm(${i})" style="background:#28a745">✅ Save</button>
-                        <button onclick="skipPackage(${i})" class="secondary">⏭️ Skip</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
+  const c = document.getElementById('pendingPackages');
+  if (!c) return;
 
-async function savePackageFromForm(i) {
-    const pkg = pendingPackages[i];
-    pkg.name = document.getElementById('name_' + i).value.trim();
-    pkg.tracking = document.getElementById('track_' + i).value.trim();
-    pkg.phone = document.getElementById('phone_' + i).value.trim();
-    pkg.postal = document.getElementById('postal_' + i).value.trim();
-    
-    if (!pkg.name || !pkg.tracking || !pkg.postal) {
-        alert('❌ Name, Tracking, and Postal Code are required');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_URL}/packages`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                courier: pkg.courier,
-                name: pkg.name,
-                tracking: pkg.tracking,
-                phone: pkg.phone,
-                postal: pkg.postal,
-                labelImage: pkg.labelImage,
-                createdBy: sessionStorage.getItem('currentUser')
-            })
-        });
-        
-        if (!response.ok) throw new Error('Failed to save package');
-        
-        currentBatchPackages.push(pkg);
-        pendingPackages.splice(i, 1);
-        showPendingPackages();
-        
-        if (!pendingPackages.length) {
-            alert('✅ All packages saved!');
-            document.getElementById('continueOrFinish').classList.remove('hidden');
-        }
-    } catch (err) {
-        console.error('Save error:', err);
-        alert('❌ Error saving package: ' + err.message);
-    }
-}
+  if (!pendingPackages.length) {
+    c.innerHTML = '';
+    return;
+  }
 
-function skipPackage(i) {
-    pendingPackages.splice(i, 1);
-    showPendingPackages();
+  c.innerHTML = `
+    <h3>Pending Packages</h3>
+    <ul>
+      ${pendingPackages
+        .map(
+          p =>
+            `<li>${p.courier} – ${p.tracking || '(no tracking)'} – ${
+              p.name || 'Unknown'
+            }</li>`
+        )
+        .join('')}
+    </ul>
+    <button class="process-btn" onclick="savePendingToApi()">💾 Save to Server</button>
+  `;
 }
 
 function continueBatch() {
-    document.getElementById('labelImages').value = '';
-    pendingPackages = [];
-    document.getElementById('pendingPackages').innerHTML = '';
-    document.getElementById('processing').innerHTML = '';
-    document.getElementById('continueOrFinish').classList.add('hidden');
+  const input = document.getElementById('labelImages');
+  const processing = document.getElementById('processing');
+  if (input) input.value = '';
+  if (processing) processing.textContent = '';
 }
 
 function finishBatch() {
-    if (!currentBatchPackages.length) return alert('No packages');
-    
-    const s = {};
-    currentBatchPackages.forEach(p => {
-        const n = p.name;
-        if (!s[n]) s[n] = { phone: p.phone, count: 0, packages: [] };
-        s[n].count++;
-        s[n].packages.push(p.tracking);
-    });
-    
-    document.getElementById('customerSummaryList').innerHTML = Object.entries(s).map(([n, d]) =>
-        `<div class="package-card">
-            <h4>${n}</h4>
-            <p><strong>Phone:</strong> ${d.phone || 'N/A'}</p>
-            <p><strong>Total Packages:</strong> <span style="font-size:1.5em;color:#28a745">${d.count}</span></p>
-            <p style="font-size:0.85em;opacity:0.7">${d.packages.join(', ')}</p>
-        </div>`
-    ).join('');
-    
-    document.getElementById('ocrWorkflow').classList.add('hidden');
-    document.getElementById('batchSummary').classList.remove('hidden');
+  const input = document.getElementById('labelImages');
+  const processing = document.getElementById('processing');
+  if (input) input.value = '';
+  if (processing) processing.textContent = 'Batch finished.';
 }
 
-function returnToMainMenu() {
-    document.getElementById('batchSummary').classList.add('hidden');
-    document.getElementById('ocrWorkflow').classList.remove('hidden');
-    document.getElementById('continueOrFinish').classList.add('hidden');
-    currentBatchPackages = [];
+// Save OCR‑created packages to /api/packages
+async function savePendingToApi() {
+  if (!pendingPackages.length) {
+    alert('No pending packages to save.');
+    return;
+  }
+
+  try {
+    for (const pkg of pendingPackages) {
+      await apiPost('/packages', pkg);
+    }
+
+    // Refresh from API and update cache
+    const packages = await apiGet('/packages');
+    cachePackages(packages);
+
+    alert(`✅ Saved ${pendingPackages.length} package(s) to server.`);
+    pendingPackages = [];
+    showPendingPackages();
+    loadShippingSummary();
+  } catch (error) {
+    console.error('Failed to save packages:', error);
+    alert(`Error saving packages: ${error.message}`);
+  }
 }
 
-async function filterPackages() {
-    const q = document.getElementById('filterInput').value.toLowerCase();
-    if (!q) {
-        document.getElementById('packageList').innerHTML = '<div class="package-card">Enter search term</div>';
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_URL}/packages/archived?search=${q}`);
-        const packages = await response.json();
-        
-        document.getElementById('packageList').innerHTML = packages.length ?
-            packages.map(p => `
-                <div class="package-card">
-                    <strong style="font-size:1.1em">${p.tracking}</strong><br>
-                    ${p.name}<br>
-                    <small>${p.courier} | ${new Date(p.created_at).toLocaleDateString()}</small>
-                    <br><span class="status-badge ${p.status === 'signed' ? 'status-signed' : 'status-pending'}">
-                        ${p.status === 'signed' ? '✅ Signed' : '📦 Pending'}
-                    </span>
-                </div>
-            `).join('') :
-            '<div class="package-card">No results for: ' + q + '</div>';
-    } catch (err) {
-        console.error('Search error:', err);
-        alert('❌ Error searching packages');
-    }
+// -------- Customer pickup (search via API, sign via /packages/{id}/sign) --------
 
-
-// Load 5-Day Ready Packages
-async function load5DayPackages() {
-    try {
-        const response = await fetch(`${API_URL}/packages/ready-5days`);
-        const packages = await response.json();
-        
-        if (!response.ok) {
-            throw new Error('Failed to fetch 5-day packages');
-        }
-        
-        if (packages.length > 0) {
-            document.getElementById('fiveDaySection').style.display = 'block';
-            displayFiveDayPackages(packages);
-        } else {
-            document.getElementById('fiveDaySection').style.display = 'none';
-        }
-    } catch (error) {
-        console.error('Error loading 5-day packages:', error);
-    }
+function openCustomerPickup() {
+  document.getElementById('pickupModal').classList.add('active');
+  selectedPackages = [];
+  document.getElementById('packagesDisplay').innerHTML =
+    '<div class="no-packages">Enter search criteria to find packages</div>';
+  document.getElementById('signatureSection').style.display = 'none';
 }
 
-// Display 5-Day Packages
-function displayFiveDayPackages(packages) {
-    const listDiv = document.getElementById('fiveDayPackageList');
-    listDiv.innerHTML = packages.map(pkg => `
-        <div class="package-card" style="margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-            <input type="checkbox" class="five-day-checkbox" data-id="${pkg.id}" style="margin-right: 10px;" />
-            <strong>${pkg.tracking}</strong> - ${pkg.name} (Ready since: ${new Date(pkg.ready_date).toLocaleDateString()})
-        </div>
-    `).join('');
+function closeCustomerPickup() {
+  document.getElementById('pickupModal').classList.remove('active');
+  document.getElementById('signatureSection').style.display = 'none';
+  document.getElementById('packagesDisplay').innerHTML =
+    '<div class="no-packages">Enter search criteria to find packages</div>';
 }
 
-// Mark Selected as Sent Back
-async function markSelectedAsSentBack() {
-    const checkboxes = document.querySelectorAll('.five-day-checkbox:checked');
-    const packageIds = Array.from(checkboxes).map(cb => cb.dataset.id);
-    
-    if (packageIds.length === 0) {
-        alert('Please select at least one package to mark as sent back.');
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_URL}/packages/bulk-sent-back`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ package_ids: packageIds })
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to mark packages as sent back');
-        }
-        
-        alert(`${packageIds.length} package(s) marked as sent back.`);
-        load5DayPackages(); // Reload the list
-    } catch (error) {
-        console.error('Error marking packages as sent back:', error);
-        alert('❌ Error marking packages as sent back.');
-    }
+async function searchPackages() {
+  const searchTerm = document
+    .getElementById('customerSearch')
+    .value.trim()
+    .toLowerCase();
+
+  if (!searchTerm) {
+    alert('Please enter a search term');
+    return;
+  }
+
+  try {
+    // Prefer API: get only recent/pending packages if you like, or all
+    const packages = await apiGet('/packages?status=pending');
+    cachePackages(packages);
+    filterAndDisplayPackages(packages, searchTerm);
+  } catch (error) {
+    console.warn('Failed to load packages from API, using cache:', error);
+    const packages = readCachedPackages();
+    filterAndDisplayPackages(packages, searchTerm);
+  }
 }
 
-// Load 5-day packages on page load
-load5DayPackages();}
+function filterAndDisplayPackages(allPackages, searchTerm) {
+  const pending = allPackages.filter(pkg => {
+    const status = (pkg.status || 'pending').toLowerCase();
+    return status === 'pending' || status === 'available for pickup';
+  });
 
+  const filtered = pending.filter(pkg => {
+    const name = (pkg.name || '').toLowerCase();
+    const tracking = (pkg.tracking || '').toLowerCase();
+    const phone = (pkg.phone || '').toLowerCase();
+    const postal = (pkg.postal || '').toLowerCase();
+    return (
+      name.includes(searchTerm) ||
+      tracking.includes(searchTerm) ||
+      phone.includes(searchTerm) ||
+      postal.includes(searchTerm)
+    );
+  });
+
+  displayPackages(filtered);
+}
+
+function displayPackages(packages) {
+  const container = document.getElementById('packagesDisplay');
+
+  if (!packages || packages.length === 0) {
+    container.innerHTML =
+      '<div class="no-packages">No packages found for this customer</div>';
+    return;
+  }
+
+  const html = `
+    <h3 style="margin-bottom: 20px;">📦 Found ${packages.length} Package(s)</h3>
+    <div class="packages-grid">
+      ${packages
+        .map(pkg => {
+          const id = pkg.id;
+          const createdAt = pkg.created_at;
+          const receivedText = createdAt
+            ? new Date(createdAt).toLocaleDateString()
+            : 'N/A';
+          return `
+            <div class="package-card">
+              ${
+                pkg.label_image
+                  ? `<img src="${pkg.label_image}" alt="Label">`
+                  : ''
+              }
+              <div class="package-info">
+                <input type="checkbox" class="select-checkbox"
+                  onchange="togglePackageSelection('${id}', this.checked)"
+                  id="pkg_${id}">
+                <strong>Tracking:</strong> ${pkg.tracking || 'N/A'}
+              </div>
+              <div class="package-info"><strong>Courier:</strong> ${
+                pkg.courier || ''
+              }</div>
+              <div class="package-info"><strong>Name:</strong> ${
+                pkg.name || ''
+              }</div>
+              <div class="package-info"><strong>Phone:</strong> ${
+                pkg.phone || 'N/A'
+              }</div>
+              <div class="package-info"><strong>Postal:</strong> ${
+                pkg.postal || ''
+              }</div>
+              <div class="package-info"><strong>Received:</strong> ${receivedText}</div>
+            </div>
+          `;
+        })
+        .join('')}
+    </div>
+    <button class="search-btn" style="margin-top: 20px;" onclick="showSignatureSection()">
+      Continue to Signature →
+    </button>
+  `;
+
+  container.innerHTML = html;
+}
+
+function togglePackageSelection(packageId, selected) {
+  const idStr = String(packageId);
+  if (selected) {
+    if (!selectedPackages.includes(idStr)) {
+      selectedPackages.push(idStr);
+    }
+  } else {
+    selectedPackages = selectedPackages.filter(id => id !== idStr);
+  }
+}
+
+function showSignatureSection() {
+  if (selectedPackages.length === 0) {
+    alert('Please select at least one package');
+    return;
+  }
+
+  const section = document.getElementById('signatureSection');
+  section.style.display = 'block';
+
+  signatureCanvas = document.getElementById('signatureCanvas');
+  signatureCtx = signatureCanvas.getContext('2d');
+
+  // Reset canvas listeners by cloning
+  const newCanvas = signatureCanvas.cloneNode(true);
+  signatureCanvas.parentNode.replaceChild(newCanvas, signatureCanvas);
+  signatureCanvas = newCanvas;
+  signatureCtx = signatureCanvas.getContext('2d');
+
+  let drawing = false;
+
+  function getPos(e) {
+    const rect = signatureCanvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    };
+  }
+
+  function startDrawing(e) {
+    e.preventDefault();
+    drawing = true;
+    const { x, y } = getPos(e);
+    signatureCtx.beginPath();
+    signatureCtx.moveTo(x, y);
+  }
+
+  function draw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const { x, y } = getPos(e);
+    signatureCtx.lineTo(x, y);
+    signatureCtx.strokeStyle = '#000';
+    signatureCtx.lineWidth = 2;
+    signatureCtx.lineCap = 'round';
+    signatureCtx.stroke();
+  }
+
+  function stopDrawing(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    drawing = false;
+  }
+
+  signatureCanvas.addEventListener('mousedown', startDrawing);
+  signatureCanvas.addEventListener('mousemove', draw);
+  signatureCanvas.addEventListener('mouseup', stopDrawing);
+  signatureCanvas.addEventListener('mouseout', stopDrawing);
+
+  signatureCanvas.addEventListener('touchstart', startDrawing, {
+    passive: false,
+  });
+  signatureCanvas.addEventListener('touchmove', draw, { passive: false });
+  signatureCanvas.addEventListener('touchend', stopDrawing, { passive: false });
+
+  section.scrollIntoView({ behavior: 'smooth' });
+}
+
+function clearSignature() {
+  if (!signatureCanvas || !signatureCtx) return;
+  signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+}
+
+async function saveSignature() {
+  if (selectedPackages.length === 0) {
+    alert('No packages selected');
+    return;
+  }
+  if (!signatureCanvas || !signatureCtx) {
+    alert('Signature area not ready');
+    return;
+  }
+
+  const signatureData = signatureCanvas.toDataURL('image/png');
+  const blank = document.createElement('canvas');
+  blank.width = signatureCanvas.width;
+  blank.height = signatureCanvas.height;
+  if (signatureData === blank.toDataURL('image/png')) {
+    alert('Please provide a signature');
+    return;
+  }
+
+  const customerName = document
+    .getElementById('customerNameInput')
+    .value.trim();
+  const nowIso = new Date().toISOString();
+
+  try {
+    for (const packageId of selectedPackages) {
+      await apiSaveSignature(packageId, {
+        signature_image: signatureData,
+        signed_by: customerName || null,
+        signed_at: nowIso,
+      });
+    }
+
+    // Refresh packages and cache
+    const packages = await apiGet('/packages');
+    cachePackages(packages);
+
+    alert(
+      `✅ Successfully completed pickup for ${selectedPackages.length} package(s)!`
+    );
+    closeCustomerPickup();
+    loadShippingSummary();
+  } catch (error) {
+    console.error('Failed to save signatures:', error);
+    alert(`Error saving signatures: ${error.message}`);
+  }
+}
+
+function useScriptelPad() {
+  alert(
+    'Scripttel Signature Pad Integration\n\nTo integrate with Scripttel signature pad:\n\n1. Install Scripttel SDK\n2. Connect pad via USB\n3. Use Scripttel API to capture signature\n\nContact your IT administrator for setup assistance.'
+  );
+}
+
+// -------- Shipping summary (API‑first, cache fallback) --------
+
+async function loadShippingSummary() {
+  const container = document.getElementById('shippingSummary');
+  const content = document.getElementById('shippingSummaryContent');
+  if (!container || !content) return;
+
+  let packages;
+  try {
+    const sinceDays = 5;
+    const since = new Date();
+    since.setDate(since.getDate() - sinceDays);
+    const isoSince = since.toISOString();
+
+    packages = await apiGet(`/packages?since=${isoSince}`);
+    cachePackages(packages);
+  } catch (error) {
+    console.warn('Failed to load summary from API, using cache:', error);
+    packages = readCachedPackages();
+  }
+
+  const summary = {};
+
+  packages.forEach(pkg => {
+    const courier = pkg.courier || 'Unknown';
+    if (!summary[courier]) {
+      summary[courier] = { small: 0, large: 0, total: 0 };
+    }
+    const weight = Number(pkg.weight || pkg.weightLbs || 0);
+    const isLarge = !isNaN(weight) && weight >= 10;
+    if (isLarge) summary[courier].large += 1;
+    else summary[courier].small += 1;
+    summary[courier].total += 1;
+  });
+
+  let html =
+    '<table style="width:100%; border-collapse: collapse;">' +
+    '<tr>' +
+    '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Shipping Company</th>' +
+    '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Small (&lt;10 lbs)</th>' +
+    '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Large (&ge;10 lbs)</th>' +
+    '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Total</th>' +
+    '</tr>';
+
+  Object.keys(summary).forEach(company => {
+    const s = summary[company];
+    html += `
+      <tr>
+        <td style="padding:8px; border-bottom:1px solid #eee;">${company}</td>
+        <td style="padding:8px; border-bottom:1px solid #eee;">${s.small}</td>
+        <td style="padding:8px; border-bottom:1px solid #eee;">${s.large}</td>
+        <td style="padding:8px; border-bottom:1px solid #eee;">${s.total}</td>
+      </tr>
+    `;
+  });
+
+  html += '</table>';
+  content.innerHTML = html;
+}
+
+// Expose functions used by dashboard.html inline handlers
+window.processImages = processImages;
+window.continueBatch = continueBatch;
+window.finishBatch = finishBatch;
+window.savePendingToApi = savePendingToApi;
+window.openCustomerPickup = openCustomerPickup;
+window.closeCustomerPickup = closeCustomerPickup;
+window.searchPackages = searchPackages;
+window.togglePackageSelection = togglePackageSelection;
+window.showSignatureSection = showSignatureSection;
+window.clearSignature = clearSignature;
+window.saveSignature = saveSignature;
+window.useScriptelPad = useScriptelPad;
+window.loadShippingSummary = loadShippingSummary;
