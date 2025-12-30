@@ -325,6 +325,10 @@
   </style>
 </head>
 <body>
+  <!-- Hidden file inputs for iOS compatibility -->
+  <input type="file" id="labelPhotoInput" accept="image/*" style="display:none;">
+  <input type="file" id="pickupPhotoInput" accept="image/*" style="display:none;">
+
   <div class="dashboard-shell">
     <aside class="sidebar">
       <h1>📦 SAV Dashboard</h1>
@@ -477,7 +481,7 @@
                 <label for="pickupCustomerName" style="margin-top:4px;">Customer Name:</label>
                 <input type="text" id="pickupCustomerName" placeholder="Customer name for receipt">
 
-                <label for="pickupPhotoInput" style="margin-top:8px;">Optional Photo (ID or Package):</label>
+                <label style="margin-top:8px;">Optional Photo (ID or Package):</label>
                 <div class="photo-tile" id="pickupPhotoBtn">
                   <div class="photo-tile-content">
                     <div class="photo-tile-emoji">📸</div>
