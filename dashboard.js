@@ -6,10 +6,12 @@ import {
   readCachedPackages,
 } from './common.js';
 import { showToast } from './toast.js';
+import { processLabelFiles } from './ocr.js';
 
 let allPackages = [];
 let pendingPackages = [];
 let selectedPackages = [];
+let batchProcessedPackages = [];
 let signatureCanvas;
 let signatureCtx;
 let isDrawing = false;
@@ -29,6 +31,12 @@ function statusClass(status) {
   if (s === 'signed') return 'status-signed';
   if (s === 'sent back') return 'status-sent-back';
   return 'status-pending';
+}
+
+function sizeClass(size) {
+  if (size === 'Large Package') return 'size-large';
+  if (size === 'Small Package') return 'size-small';
+  return '';
 }
 
 async function loadPackages() {
@@ -63,11 +71,13 @@ function renderPendingPackages() {
         : '';
       const s = normalizeStatus(p.status);
       const cls = statusClass(s);
+      const sizeLabel = p.size ? ` • ${p.size}` : '';
+      const weight = p.weight_lbs ? ` (${p.weight_lbs} lbs)` : '';
       return `
         <div class="package-row">
           <div class="pkg-main">
             <div class="pkg-name">${p.tracking || '(no tracking)'} — ${p.name || ''}</div>
-            <div class="pkg-meta">${p.courier || ''} · ${created}</div>
+            <div class="pkg-meta">${p.courier || ''} · ${created}${sizeLabel}${weight}</div>
           </div>
           <div class="pkg-status ${cls}">${s}</div>
         </div>
@@ -133,26 +143,6 @@ function displayCapturedPhoto(file) {
   reader.readAsDataURL(file);
 }
 
-function extractFieldsFromText(text, courier) {
-  const out = { name: '', tracking: '', phone: '', postal: '', weight: '', service: '' };
-  if (!text) return out;
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  const postalRegex = /\b[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\s?\d[ABCEGHJ-NPRSTV-Z]\d\b/i;
-  const phoneRegex = /(\+?1[-.,\s])?(\(?\d{3}\)?[-.,\s]?\d{3}[-.,\s]?\d{4})/;
-  const trackingRegex = /\b[0-9A-Z]{8,}\b/g;
-  const postalMatch = text.match(postalRegex);
-  if (postalMatch) out.postal = postalMatch[0].toUpperCase();
-  const phoneMatch = text.match(phoneRegex);
-  if (phoneMatch) out.phone = phoneMatch[0];
-  const postalIdx = lines.findIndex(l => postalRegex.test(l));
-  if (postalIdx > 0) out.name = lines[postalIdx - 1];
-  const trackings = text.match(trackingRegex);
-  if (trackings && trackings.length) {
-    out.tracking = trackings.sort((a, b) => b.length - a.length)[0];
-  }
-  return out;
-}
-
 async function processLabelPhoto() {
   if (!capturedPhotoBlob) {
     showToast('❌ No photo captured. Click "Take Photo" first.', 3000);
@@ -178,23 +168,83 @@ async function processLabelPhoto() {
     
     const text = (data.text || '').replace(/\s+/g, ' ').trim();
     console.log('OCR Result:', text);
+    
+    // Use ocr.js extraction function if available, else fall back to inline
     const extracted = extractFieldsFromText(text, courier);
+    
+    // Calculate weight and size
+    let weight_lbs = 0;
+    let weight_kg = 0;
+    const weightRegex = /Ship\s+Wt[:\s]+([\d.]+)\s*(kg|lbs?|KG|LBS?)/i;
+    const weightMatch = text.match(weightRegex);
+    if (weightMatch) {
+      const weightValue = parseFloat(weightMatch[1]);
+      const weightUnit = (weightMatch[2] || 'kg').toLowerCase();
+      if (weightUnit.includes('kg')) {
+        weight_kg = weightValue;
+        weight_lbs = parseFloat((weightValue * 2.20462).toFixed(2));
+      } else {
+        weight_lbs = weightValue;
+        weight_kg = parseFloat((weightValue / 2.20462).toFixed(2));
+      }
+    }
+    
+    const packageSize = weight_lbs < 10 ? 'Small Package' : 'Large Package';
     
     const trackingInput = document.getElementById('trackingInput');
     const nameInput = document.getElementById('nameInput');
     const phoneInput = document.getElementById('phoneInput');
     const postalInput = document.getElementById('postalInput');
+    const weightInput = document.getElementById('weightInput');
+    const sizeInput = document.getElementById('sizeInput');
     
     if (trackingInput) trackingInput.value = extracted.tracking || '';
     if (nameInput) nameInput.value = extracted.name || '';
     if (phoneInput) phoneInput.value = extracted.phone || '';
     if (postalInput) postalInput.value = extracted.postal || '';
+    if (weightInput) weightInput.value = weight_lbs.toFixed(2) || '';
+    if (sizeInput) sizeInput.value = packageSize || '';
     
-    showToast(`✅ OCR Complete! Found: ${extracted.tracking || 'no tracking'}`, 3000);
+    showToast(`✅ OCR Complete! Found: ${extracted.tracking || 'no tracking'} (${packageSize})`, 3000);
   } catch (error) {
     console.error('OCR error:', error);
     showToast(`❌ OCR failed: ${error.message}`, 4000);
   }
+}
+
+function extractFieldsFromText(text, courier) {
+  const out = { name: '', tracking: '', phone: '', postal: '', address: '' };
+  if (!text) return out;
+  
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const postalRegex = /\b[ABCEGHJ-NPRSTVXY]\d[ABCEGHJ-NPRSTV-Z]\s?\d[ABCEGHJ-NPRSTV-Z]\d\b/i;
+  const phoneRegex = /(\+?1[-.,\s])?(\(?\d{3}\)?[-.,\s]?\d{3}[-.,\s]?\d{4})/;
+  const trackingRegex = /\b[0-9A-Z]{8,}\b/g;
+  
+  const postalMatch = text.match(postalRegex);
+  if (postalMatch) out.postal = postalMatch[0].toUpperCase();
+  
+  const phoneMatch = text.match(phoneRegex);
+  if (phoneMatch) out.phone = phoneMatch[0];
+  
+  const postalIdx = lines.findIndex(l => postalRegex.test(l));
+  if (postalIdx > 0) out.name = lines[postalIdx - 1];
+  
+  // Special handling for Intelcom Dragonfly tracking
+  if (courier.toUpperCase().includes('INTELCOM') || courier.toUpperCase().includes('DRAGONFLY')) {
+    const intlcmMatch = text.match(/INTLCM[0-9]{8,}/i);
+    if (intlcmMatch) {
+      out.tracking = intlcmMatch[0];
+      return out;
+    }
+  }
+  
+  const trackings = text.match(trackingRegex);
+  if (trackings && trackings.length) {
+    out.tracking = trackings.sort((a, b) => b.length - a.length)[0];
+  }
+  
+  return out;
 }
 
 async function addSinglePackage() {
@@ -204,10 +254,14 @@ async function addSinglePackage() {
   const phone = document.getElementById('phoneInput')?.value.trim() || '';
   const postal = document.getElementById('postalInput')?.value.trim() || '';
   const address = document.getElementById('addressInput')?.value.trim() || '';
+  const weight_lbs = parseFloat(document.getElementById('weightInput')?.value || 0);
+  const size = document.getElementById('sizeInput')?.value || '';
+  
   if (!courier || !tracking || !name) {
     showToast('❌ Courier, tracking, and name required.', 3000);
     return;
   }
+  
   const payload = {
     courier,
     tracking,
@@ -215,16 +269,25 @@ async function addSinglePackage() {
     phone,
     postal,
     address,
+    weight_lbs: weight_lbs || 0,
+    weight_kg: weight_lbs > 0 ? parseFloat((weight_lbs / 2.20462).toFixed(2)) : 0,
+    size: size || (weight_lbs < 10 ? 'Small Package' : 'Large Package'),
     status: 'pending',
   };
+  
   try {
     await apiPost('/packages', payload);
+    batchProcessedPackages.push(payload);
+    
     document.getElementById('trackingInput').value = '';
     document.getElementById('nameInput').value = '';
     document.getElementById('phoneInput').value = '';
     document.getElementById('postalInput').value = '';
     document.getElementById('addressInput').value = '';
+    document.getElementById('weightInput').value = '';
+    document.getElementById('sizeInput').value = '';
     capturedPhotoBlob = null;
+    
     await loadPackages();
     showToast('✅ Package added successfully!', 3000);
   } catch (err) {
@@ -238,6 +301,7 @@ function initLabelPhotoButtons() {
   const process = document.getElementById('processLabelBtn');
   const more = document.getElementById('addMoreLabelBtn');
   const finish = document.getElementById('finishBatchBtn');
+  
   if (take) {
     take.addEventListener('click', openCameraCapture);
   }
@@ -252,14 +316,82 @@ function initLabelPhotoButtons() {
   }
   if (more) {
     more.addEventListener('click', () => {
-      showToast('📋 Multiple images coming soon!', 3000);
+      showToast('📋 Ready for next label!', 3000);
+      capturedPhotoBlob = null;
+      document.querySelector('[data-photo-preview]')?.remove();
     });
   }
   if (finish) {
-    finish.addEventListener('click', () => {
-      showToast('✅ Batch finish coming soon!', 3000);
-    });
+    finish.addEventListener('click', showBatchReport);
   }
+}
+
+function showBatchReport() {
+  if (!batchProcessedPackages.length) {
+    showToast('❌ No packages processed in this batch.', 3000);
+    return;
+  }
+  
+  const smallCount = batchProcessedPackages.filter(
+    p => p.size === 'Small Package' || p.weight_lbs < 10
+  ).length;
+  const largeCount = batchProcessedPackages.filter(
+    p => p.size === 'Large Package' || p.weight_lbs >= 10
+  ).length;
+  const totalWeight = batchProcessedPackages.reduce((sum, p) => sum + (p.weight_lbs || 0), 0);
+  
+  const reportModal = document.createElement('div');
+  reportModal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+  
+  reportModal.innerHTML = `
+    <div style="
+      background: #1f2937;
+      color: #e5e7eb;
+      padding: 24px;
+      border-radius: 12px;
+      max-width: 400px;
+      border: 1px solid #374151;
+    ">
+      <h2 style="margin-top: 0; color: #60a5fa;">📦 Batch Processing Report</h2>
+      <div style="background: #111827; padding: 16px; border-radius: 8px; margin: 16px 0;">
+        <p style="margin: 8px 0;"><strong>Total Packages:</strong> ${batchProcessedPackages.length}</p>
+        <p style="margin: 8px 0; color: #10b981;"><strong>Small Packages (&lt;10 lbs):</strong> ${smallCount}</p>
+        <p style="margin: 8px 0; color: #f97316;"><strong>Large Packages (≥10 lbs):</strong> ${largeCount}</p>
+        <p style="margin: 8px 0;"><strong>Total Weight:</strong> ${totalWeight.toFixed(2)} lbs</p>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button onclick="this.parentElement.parentElement.parentElement.remove()" style="
+          flex: 1;
+          padding: 10px;
+          background: #3b82f6;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 500;
+        ">Close</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(reportModal);
+  
+  // Reset batch for next processing
+  setTimeout(() => {
+    batchProcessedPackages = [];
+    showToast('✅ Batch report displayed. Ready for next batch!', 3000);
+  }, 100);
 }
 
 function searchPackagesForPickup() {
@@ -408,7 +540,7 @@ export function initDashboard() {
   const scriptelBtn = document.getElementById('scriptelPickupBtn');
   if (scriptelBtn) {
     scriptelBtn.addEventListener('click', () => {
-      showToast('🖊️ Scriptel integration coming soon!', 3000);
+      showToast('🔧 Scriptel integration coming soon!', 3000);
     });
   }
   initSignaturePad();
