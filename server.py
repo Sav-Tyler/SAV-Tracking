@@ -16,7 +16,8 @@ CORS(app)
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
-@app.route('/login', methods=['POST'])
+
+@app.route('/api/login', methods=['POST'])
 def login():
     """Handle staff login"""
     data = request.json
