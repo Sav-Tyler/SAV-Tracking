@@ -2,95 +2,283 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>SAV Archived Packages</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SAV Archived</title>
   <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+    }
+    .archived-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 12px;
+      font-weight: 600;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 24px 0 8px;
+      font-weight: 600;
+      border-bottom: 1px solid #1f2937;
+      padding-bottom: 4px;
+    }
+    p {
+      font-size: 13px;
+      color: #9ca3af;
+      margin: 2px 0 8px;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      color: #0b1120;
+    }
+    .btn-secondary {
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #1f2937;
+    }
+    .filters-card, .results-card {
+      background: #020617;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      padding: 16px 16px 20px;
+      margin-top: 12px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: #e5e7eb;
+    }
+    input[type="text"],
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      background: #020617;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      padding: 8px 10px;
+      color: #e5e7eb;
+      font-size: 13px;
+      outline: none;
+    }
+    input[type="text"]:focus,
+    select:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.3);
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .col-3 {
+      flex: 1 1 220px;
+    }
+    .archive-list {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .archive-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #020617;
+      border: 1px solid #1f2937;
+    }
+    .archive-main {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .archive-tracking {
+      font-weight: 600;
+      font-size: 14px;
+      color: #e5e7eb;
+    }
+    .archive-meta {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 2px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .archive-side {
+      text-align: right;
+      margin-left: 12px;
+      min-width: 120px;
+    }
+    .archive-status {
+      display: inline-flex;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+    .status-picked-up {
+      background: rgba(34,197,94,0.12);
+      color: #22c55e;
+    }
+    .status-sent-back {
+      background: rgba(248,113,113,0.12);
+      color: #f97316;
+    }
+    .status-unknown {
+      background: rgba(148,163,184,0.12);
+      color: #9ca3af;
+    }
+    .archive-date {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+    .empty-state {
+      font-size: 13px;
+      color: #9ca3af;
+      padding: 12px;
+      text-align: center;
+    }
+    .pill {
+      display: inline-flex;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: #111827;
+      color: #9ca3af;
+      margin-left: 8px;
+    }
+    @media (max-width: 640px) {
+      .archived-container {
+        padding: 16px 12px 32px;
+      }
+      .toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .toolbar-right {
+        align-self: stretch;
+        justify-content: flex-start;
+      }
+      .archive-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .archive-side {
+        margin-left: 0;
+        margin-top: 6px;
+        text-align: left;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="page-shell">
-    <div class="page-content">
-      <h1>📂 Archived Packages</h1>
-
-      <div class="header">
-        <span id="welcomeUser"></span>
-        <button onclick="location.href='dashboard.html'">🏠 Dashboard</button>
+  <div class="archived-container">
+    <div class="toolbar">
+      <div>
+        <h1>Archived Packages</h1>
+        <p>Search and review packages that have been picked up or otherwise completed.</p>
       </div>
+      <div class="toolbar-right">
+        <button class="btn btn-secondary" type="button" onclick="window.location.href='dashboard.html'">
+          ← Back to dashboard
+        </button>
+      </div>
+    </div>
 
-      <div class="section card">
-        <div style="margin-bottom: 15px;">
-          <button
-            onclick="viewAllArchived()"
-            style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-right: 10px;"
-          >
-            📋 View All
-          </button>
+    <h2>Search &amp; Filters <span class="pill">Signed / Completed</span></h2>
+    <div class="filters-card">
+      <div class="row">
+        <div class="col-3">
+          <label for="archiveFilter">Quick search</label>
+          <input type="text" id="archiveFilter" placeholder="Name, tracking, phone, or postal">
         </div>
-
-        <h3>Search Archives</h3>
-        <input type="text" id="archiveFilter" placeholder="Search...">
-        <button onclick="loadArchived()">📋 Load</button>
-
-        <div style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
-          <h4 style="margin: 0 0 10px 0;">🔍 Filters</h4>
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <div>
-              <label>Customer:</label>
-              <input
-                type="text"
-                id="filterCustomer"
-                placeholder="Customer name"
-                style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;"
-              />
-            </div>
-            <div>
-              <label>Tracking #:</label>
-              <input
-                type="text"
-                id="filterTracking"
-                placeholder="Tracking number"
-                style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;"
-              />
-            </div>
-            <div>
-              <label>Status:</label>
-              <select
-                id="filterStatus"
-                style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;"
-              >
-                <option value="">All Statuses</option>
-                <option value="Sent Back">Sent Back</option>
-                <option value="Picked Up">Picked Up</option>
-              </select>
-            </div>
-            <div style="display: flex; align-items: flex-end;">
-              <button
-                onclick="applyFilters()"
-                style="padding: 6px 15px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </div>
+        <div class="col-3">
+          <label for="filterCustomer">Customer name</label>
+          <input type="text" id="filterCustomer" placeholder="e.g. Smith">
         </div>
+        <div class="col-3">
+          <label for="filterTracking">Tracking number</label>
+          <input type="text" id="filterTracking" placeholder="e.g. 1234">
+        </div>
+        <div class="col-3">
+          <label for="filterStatus">Status</label>
+          <select id="filterStatus">
+            <option value="">Any</option>
+            <option value="signed">Picked up</option>
+            <option value="sent back">Sent back</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top: 10px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-primary" type="button" id="archiveSearchBtn">Search archived</button>
+        <button class="btn btn-secondary" type="button" id="archiveViewAllBtn">View all</button>
+      </div>
+      <p>
+        Quick search matches name, tracking, phone, or postal. Detailed filters refine the results from the current load.
+      </p>
+    </div>
 
-        <div id="archiveList" class="scrollable"></div>
+    <h2>Results</h2>
+    <div class="results-card">
+      <div id="archiveList" class="archive-list">
+        <div class="empty-state">No archived packages loaded yet. Use “Search archived” or “View all”.</div>
       </div>
     </div>
   </div>
 
-  <!-- Load config.js first -->
   <script type="module">
-    import { API_BASE_URL } from './config.js';
-    window.API_BASE_URL = API_BASE_URL;
+    import { checkAuth } from './common.js';
+    import { loadArchived, viewAllArchived, applyFilters } from './archive.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      checkAuth();
+
+      document.getElementById('archiveSearchBtn')?.addEventListener('click', loadArchived);
+      document.getElementById('archiveViewAllBtn')?.addEventListener('click', viewAllArchived);
+
+      document.getElementById('archiveFilter')?.addEventListener('input', loadArchived);
+      document.getElementById('filterCustomer')?.addEventListener('input', applyFilters);
+      document.getElementById('filterTracking')?.addEventListener('input', applyFilters);
+      document.getElementById('filterStatus')?.addEventListener('change', applyFilters);
+
+      // initial load
+      viewAllArchived();
+    });
   </script>
-
-  <!-- Then common.js (auth, API helpers, cache) -->
-  <script type="module" src="./js/common.js"></script>
-
-  <!-- Then auth.js (for welcomeUser) -->
-  <script type="module" src="./js/auth.js"></script>
-
-  <!-- Finally page-specific JS -->
-  <script type="module" src="./js/archive.js"></script>
 </body>
 </html>

@@ -5,231 +5,215 @@
   <title>SAV Settings</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+    }
+    .settings-container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 12px;
+      font-weight: 600;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 24px 0 8px;
+      font-weight: 600;
+      border-bottom: 1px solid #1f2937;
+      padding-bottom: 4px;
+    }
+    p {
+      font-size: 13px;
+      color: #9ca3af;
+      margin: 2px 0 8px;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+    .card {
+      background: #020617;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      padding: 16px 16px 20px;
+      margin-top: 12px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: #e5e7eb;
+    }
+    input[type="text"],
+    input[type="url"],
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      background: #020617;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      padding: 8px 10px;
+      color: #e5e7eb;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus,
+    textarea:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.3);
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .col-6 {
+      flex: 1 1 48%;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      color: #0b1120;
+    }
+    .btn-secondary {
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #1f2937;
+    }
+    .hint {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 2px;
+    }
+    @media (max-width: 640px) {
+      .settings-container {
+        padding: 16px 12px 32px;
+      }
+      .toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .toolbar-right {
+        align-self: stretch;
+        justify-content: flex-start;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="page-shell">
-    <div class="page-content">
-      <h1>System Settings</h1>
+  <div class="settings-container">
+    <div class="toolbar">
+      <div>
+        <h1>Settings</h1>
+        <p>Configure branding, colors, telephony, and API endpoint for the SAV package system.</p>
+      </div>
+      <div class="toolbar-right">
+        <button class="btn btn-secondary" type="button" onclick="window.location.href='dashboard.html'">
+          ← Back to dashboard
+        </button>
+      </div>
+    </div>
 
-      <div class="header">
-        <span id="welcomeUser"></span>
-        <div class="btn-group">
-          <button onclick="location.href='dashboard.html'">Dashboard</button>
-          <button onclick="location.href='admin.html'">Admin</button>
-          <button onclick="logout()">Logout</button>
+    <h2>API endpoint</h2>
+    <div class="card">
+      <label for="apiBaseUrlInput">API base URL</label>
+      <input type="url" id="apiBaseUrlInput" placeholder="e.g. http://192.168.1.50:5000/api">
+      <p class="hint">
+        If left blank, the system uses the current host on port 5000 (for example
+        http://192.168.1.50:5000/api). Enter a full URL to use a hosted server instead.
+      </p>
+      <button class="btn btn-primary" type="button" id="saveApiBaseUrlBtn">Save API URL</button>
+    </div>
+
+    <h2>Public tracking page</h2>
+    <div class="card">
+      <p>Customize the public tracking page appearance.</p>
+      <label for="publicTaglineInput">Public tagline</label>
+      <input type="text" id="publicTaglineInput" placeholder="Short message for the customer lookup screen">
+      <p class="hint">
+        Shown under your logo on the customer lookup screen.
+      </p>
+
+      <label for="logoUrlInput" style="margin-top: 8px;">Logo URL (optional)</label>
+      <input type="url" id="logoUrlInput" placeholder="https://example.com/logo.png">
+      <p class="hint">
+        If left empty, the existing logo is kept.
+      </p>
+
+      <button class="btn btn-primary" type="button" id="saveBrandingBtn">Save branding</button>
+    </div>
+
+    <h2>Colors</h2>
+    <div class="card">
+      <p>
+        Color configuration (text, backgrounds, staff bar) can be added here in future.
+        Current version uses default theme.
+      </p>
+    </div>
+
+    <h2>Telephony (Grandstream)</h2>
+    <div class="card">
+      <p>Configure automated pickup calls via Grandstream UCM6302A.</p>
+      <div class="row">
+        <div class="col-6">
+          <label for="pbxHostInput">PBX Host</label>
+          <input type="text" id="pbxHostInput" placeholder="192.168.1.10">
+        </div>
+        <div class="col-6">
+          <label for="pbxPortInput">Port</label>
+          <input type="text" id="pbxPortInput" placeholder="8089">
+        </div>
+        <div class="col-6">
+          <label for="pbxUserInput">Username</label>
+          <input type="text" id="pbxUserInput" placeholder="apiuser">
+        </div>
+        <div class="col-6">
+          <label for="pbxPasswordInput">Password</label>
+          <input type="text" id="pbxPasswordInput" placeholder="••••••••">
         </div>
       </div>
-
-      <div class="card">
-        <h3>Branding & Colors</h3>
-        <p>Customize the public tracking page appearance.</p>
-
-        <div class="grid grid-cols-1 md:grid-cols-2">
-          <div class="section">
-            <h4>Logo & Tagline</h4>
-            <label>
-              Logo URL (or file path):
-              <input type="text" id="logoUrl" placeholder="e.g. /images/logo.png">
-            </label>
-            <label>
-              Tagline:
-              <input type="text" id="tagline" placeholder="e.g. Customer Package Manager">
-            </label>
-          </div>
-
-          <div class="section">
-            <h4>Colors</h4>
-            <label>
-              Text color:
-              <input type="color" id="textColor">
-            </label>
-            <label>
-              Header background:
-              <input type="color" id="headerBgColor">
-            </label>
-            <label>
-              Page background:
-              <input type="color" id="pageBgColor">
-            </label>
-            <label>
-              Tracking card background:
-              <input type="color" id="trackingBgColor">
-            </label>
-            <label>
-              Staff bar background:
-              <input type="color" id="staffBarBgColor">
-            </label>
-          </div>
-        </div>
-
-        <div class="btn-group">
-          <button onclick="saveSettings()">Save Settings</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Grandstream UCM Settings</h3>
-        <p>Configure automated pickup calls via Grandstream UCM6302A.</p>
-
-        <div class="grid grid-cols-1 md:grid-cols-2">
-          <div class="section">
-            <label>
-              Grandstream IP:
-              <input type="text" id="grandstreamIp" placeholder="e.g. 192.168.1.100">
-            </label>
-            <label>
-              Admin username:
-              <input type="text" id="grandstreamUsername" placeholder="e.g. admin">
-            </label>
-            <label>
-              Admin password:
-              <input type="password" id="grandstreamPassword" placeholder="••••••••">
-            </label>
-          </div>
-          <div class="section">
-            <label>
-              Extension for outbound calls:
-              <input type="text" id="grandstreamExtension" placeholder="e.g. 8000">
-            </label>
-            <label>
-              Recording ID (pre-recorded message):
-              <input type="text" id="grandstreamRecordingId" placeholder="e.g. 1">
-            </label>
-          </div>
-        </div>
-
-        <div class="btn-group">
-          <button class="secondary" onclick="testCall()">Test Call</button>
-          <button onclick="saveGrandstreamSettings()">Save Grandstream Settings</button>
-        </div>
-      </div>
-
-      <div class="batch-complete">
-        <h3>Notes</h3>
-        <ul>
-          <li>Branding changes affect the public tracking page after refresh.</li>
-          <li>Grandstream settings are used for automated pickup reminders.</li>
-          <li>All settings are stored centrally in the server database.</li>
-        </ul>
-      </div>
+      <p class="hint">
+        These settings control automatic calls to customers when packages are processed.
+      </p>
+      <button class="btn btn-primary" type="button" id="saveTelephonyBtn">Save telephony</button>
     </div>
   </div>
 
-  <!-- Load config and shared helpers -->
   <script type="module">
-    import { API_BASE_URL } from './config.js';
-    window.API_BASE_URL = API_BASE_URL;
-  </script>
-  <script type="module" src="common.js"></script>
-  <script type="module">
-    import { checkAuth, logout, apiGet, apiPost } from './common.js';
-
-    // Attach logout globally for buttons
-    window.logout = logout;
-
-    function applyBranding(settings) {
-      const root = document.documentElement;
-      if (settings.text_color) root.style.setProperty('--index-text-color', settings.text_color);
-      if (settings.header_bg_color) root.style.setProperty('--index-header-bg', settings.header_bg_color);
-      if (settings.page_bg_color) root.style.setProperty('--index-page-bg', settings.page_bg_color);
-      if (settings.tracking_bg_color) root.style.setProperty('--index-tracking-bg', settings.tracking_bg_color);
-      if (settings.staff_bar_bg_color) root.style.setProperty('--index-staff-bar-bg', settings.staff_bar_bg_color);
-    }
-
-    async function loadSettings() {
-      try {
-        const settings = await apiGet('/settings');
-        document.getElementById('logoUrl').value = settings.logo_url || '';
-        document.getElementById('tagline').value = settings.tagline || '';
-        document.getElementById('textColor').value = settings.text_color || '#111827';
-        document.getElementById('headerBgColor').value = settings.header_bg_color || '#0891b2';
-        document.getElementById('pageBgColor').value = settings.page_bg_color || '#4f46e5';
-        document.getElementById('trackingBgColor').value = settings.tracking_bg_color || '#ffffff';
-        document.getElementById('staffBarBgColor').value = settings.staff_bar_bg_color || '#0891b2';
-
-        applyBranding(settings);
-
-        // Grandstream settings
-        document.getElementById('grandstreamIp').value = settings.grandstream_ip || '';
-        document.getElementById('grandstreamUsername').value = settings.grandstream_username || '';
-        document.getElementById('grandstreamPassword').value = settings.grandstream_password || '';
-        document.getElementById('grandstreamExtension').value = settings.grandstream_extension || '';
-        document.getElementById('grandstreamRecordingId').value = settings.grandstream_recording_id || '';
-      } catch (error) {
-        console.error('Failed to load settings:', error);
-        alert('Failed to load settings from server.');
-      }
-    }
-
-    async function saveSettings() {
-      const payload = {
-        logo_url: document.getElementById('logoUrl').value.trim(),
-        tagline: document.getElementById('tagline').value.trim(),
-        text_color: document.getElementById('textColor').value,
-        header_bg_color: document.getElementById('headerBgColor').value,
-        page_bg_color: document.getElementById('pageBgColor').value,
-        tracking_bg_color: document.getElementById('trackingBgColor').value,
-        staff_bar_bg_color: document.getElementById('staffBarBgColor').value,
-      };
-
-      try {
-        await apiPost('/settings', payload);
-        applyBranding(payload);
-        alert('Branding settings saved.');
-      } catch (error) {
-        console.error('Failed to save settings:', error);
-        alert('Failed to save settings.');
-      }
-    }
-
-    async function saveGrandstreamSettings() {
-      const payload = {
-        grandstream_ip: document.getElementById('grandstreamIp').value.trim(),
-        grandstream_username: document.getElementById('grandstreamUsername').value.trim(),
-        grandstream_password: document.getElementById('grandstreamPassword').value.trim(),
-        grandstream_extension: document.getElementById('grandstreamExtension').value.trim(),
-        grandstream_recording_id: document.getElementById('grandstreamRecordingId').value.trim(),
-      };
-
-      try {
-        await apiPost('/settings', payload);
-        alert('Grandstream settings saved.');
-      } catch (error) {
-        console.error('Failed to save Grandstream settings:', error);
-        alert('Failed to save Grandstream settings.');
-      }
-    }
-
-    async function testCall() {
-      const testCustomerId = prompt('Enter a test customer ID to call:');
-      if (!testCustomerId) return;
-
-      try {
-        const result = await apiPost(`/call/customer/${testCustomerId}`, {});
-        if (result.success) {
-          alert(`Test call initiated: ${result.message || ''}`);
-        } else {
-          alert(`Test call failed: ${result.message || 'Unknown error'}`);
-        }
-      } catch (error) {
-        console.error('Test call failed:', error);
-        alert('Failed to initiate test call.');
-      }
-    }
-
-    window.saveSettings = saveSettings;
-    window.saveGrandstreamSettings = saveGrandstreamSettings;
-    window.testCall = testCall;
+    import { checkAuth } from './common.js';
+    import { initSettingsPage } from './settings.js';
 
     document.addEventListener('DOMContentLoaded', () => {
-      const user = checkAuth();
-      if (user) {
-        const welcomeEl = document.getElementById('welcomeUser');
-        if (welcomeEl) {
-          welcomeEl.textContent = `Welcome, ${user.username} (${user.role})`;
-        }
-        loadSettings();
-      }
+      checkAuth();
+      initSettingsPage();
     });
   </script>
 </body>

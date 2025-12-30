@@ -1,14 +1,8 @@
 // admin.js
-import {
-  apiGet,
-  apiPost,
-  apiPut,
-  apiDelete,
-  getAuthToken,
-  getCurrentUser,
-} from './common.js';
 
-// === API helpers (for /api/users) ===
+import { apiGet, apiPost, apiPut } from './common.js';
+
+// --- API helpers (for /api/users) ---
 
 async function getUsers() {
   try {
@@ -40,153 +34,143 @@ async function updateUserPassword(userId, newPassword) {
   }
 }
 
-// === UI functions ===
+// --- UI functions ---
 
-function createUser() {
-  const u = document.getElementById('newUsername').value.trim();
-  const p = document.getElementById('newPassword').value;
-  const r = document.getElementById('newRole').value;
-  if (!u || !p) return alert('Username and password are required.');
+async function handleCreateUser() {
+  const usernameEl = document.getElementById('newUsername');
+  const passwordEl = document.getElementById('newPassword');
+  const roleEl = document.getElementById('newRole');
 
-  const userData = {
-    username: u,
-    password: p,
-    role: r,
-  };
+  const u = usernameEl ? usernameEl.value.trim() : '';
+  const p = passwordEl ? passwordEl.value : '';
+  const r = roleEl ? roleEl.value : 'staff';
 
-  createUserOnServer(userData)
-    .then(result => {
-      if (result.success) {
-        alert('User created');
-        renderUserList();
-        document.getElementById('newUsername').value = '';
-        document.getElementById('newPassword').value = '';
-      } else {
-        alert(`Error: ${result.message}`);
-      }
-    })
-    .catch(() => {
-      alert('Error creating user. Check network and try again.');
-    });
+  if (!u || !p) {
+    alert('Username and password are required.');
+    return;
+  }
+
+  const userData = { username: u, password: p, role: r };
+
+  const result = await createUserOnServer(userData);
+  if (result.success) {
+    alert('User created');
+    if (usernameEl) usernameEl.value = '';
+    if (passwordEl) passwordEl.value = '';
+    await renderUserList();
+  } else {
+    alert(`Error: ${result.message}`);
+  }
 }
 
-function editUserPassword(id, newPassword) {
-  if (!newPassword) return alert('Password required');
-  updateUserPassword(id, newPassword)
-    .then(result => {
-      if (result.success) {
-        alert('Password updated');
-        renderUserList();
-      } else {
-        alert(`Error: ${result.message}`);
-      }
-    })
-    .catch(() => {
-      alert('Error updating password. Check network and try again.');
-    });
+async function handleUpdatePassword(userId) {
+  const inputId = `password-${userId}`;
+  const input = document.getElementById(inputId);
+  const newPassword = input ? input.value : '';
+  if (!newPassword) {
+    alert('Password required');
+    return;
+  }
+
+  const result = await updateUserPassword(userId, newPassword);
+  if (result.success) {
+    alert('Password updated');
+    if (input) input.value = '';
+  } else {
+    alert(`Error: ${result.message}`);
+  }
 }
 
-function renderUserList() {
-  getUsers()
-    .then(users => {
-      const container = document.getElementById('userList');
-      if (!container) return;
-
-      container.innerHTML = users.map(u => `
-        <div class="package-card" style="margin-bottom: 12px; padding: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <strong>${u.username}</strong>
-            <span style="
-              padding: 4px 10px;
-              border-radius: 999px;
-              background: ${u.role === 'admin' ? '#f66' : '#5c6'};
-              color: #fff;
-              font-size: 0.85rem;
-            ">
-              ${u.role}
-            </span>
-          </div>
-
-          <div class="form-group" style="margin-bottom: 8px;">
-            <label style="display:block; margin-bottom:4px;">Password:</label>
-            <div class="password-row" style="display:flex; align-items:center; gap:8px;">
-              <input 
-                type="password" 
-                id="pwd-${u.id}" 
-                value="${u.password}" 
-                style="flex:1; padding:6px 10px; border:1px solid #ddd; border-radius:4px;"
-              />
-              <button 
-                type="button" 
-                class="show-password-btn" 
-                onclick="toggleUserPassword('pwd-${u.id}', this)" 
-                title="Show/Hide Password"
-                style="padding:6px 10px; border:none; border-radius:4px; background:#e5e7eb; cursor:pointer;"
-              >
-                👁️
-              </button>
-            </div>
-          </div>
-
-          <div style="text-align:center; margin-top:8px;">
-            <button 
-              onclick="editUserPassword(${u.id}, document.getElementById('pwd-${u.id}').value)" 
-              style="padding:6px 18px; background:#4CAF50; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.9rem;"
-            >
-              💾 Save
-            </button>
-          </div>
-        </div>
-      `).join('');
-    })
-    .catch(() => {
-      const container = document.getElementById('userList');
-      if (container) {
-        container.innerHTML = '<p>Failed to load users. Check connection.</p>';
-      }
-    });
-}
-
-function toggleUserPassword(inputId, btn) {
+function toggleUserPassword(inputId) {
   const input = document.getElementById(inputId);
   if (!input) return;
   input.type = input.type === 'password' ? 'text' : 'password';
 }
 
-// === API URL setting (for admin.html) ===
+async function renderUserList() {
+  const container = document.getElementById('usersTableBody');
+  if (!container) return;
 
-function saveApiBaseUrl() {
-  const input = document.getElementById('apiBaseUrlInput');
-  const newUrl = input.value.trim();
-
-  if (!newUrl) {
-    return alert('Please enter a valid API URL (e.g. http://192.168.1.10:5000/api or https://sub.example.com/api)');
+  const users = await getUsers();
+  if (!users || users.length === 0) {
+    container.innerHTML =
+      '<tr><td colspan="4">No users found. Add a user above.</td></tr>';
+    return;
   }
 
-  // Validate that it looks like a URL ending with /api
-  if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
-    return alert('URL must start with http:// or https://');
-  }
-  if (!newUrl.endsWith('/api')) {
-    return alert('URL must end with /api (e.g. https://sub.example.com/api)');
-  }
+  const rows = users.map((u) => {
+    const created = u.created_at ? new Date(u.created_at).toLocaleString() : '';
+    const roleClass =
+      (u.role || '').toLowerCase() === 'admin' ? 'role-admin' : 'role-staff';
+    const roleLabel = u.role || 'staff';
+    const inputId = `password-${u.id}`;
 
-  // Save to localStorage and tell the user to reload
-  window.saveApiBaseUrlToStorage(newUrl);
-  alert('API URL saved. Please reload the page for changes to take effect.');
+    return `
+      <tr>
+        <td>${u.username}</td>
+        <td><span class="${roleClass}">${roleLabel}</span></td>
+        <td>${created}</td>
+        <td>
+          <input
+            type="password"
+            id="${inputId}"
+            placeholder="New password"
+            style="width: 120px; font-size: 11px; padding: 4px 6px; margin-right: 4px;"
+          />
+          <button
+            type="button"
+            class="btn btn-secondary"
+            style="padding: 4px 8px; font-size: 11px;"
+            data-action="toggle"
+            data-input-id="${inputId}"
+          >
+            Show
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            style="padding: 4px 8px; font-size: 11px;"
+            data-action="update"
+            data-user-id="${u.id}"
+          >
+            Update
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  container.innerHTML = rows.join('');
+
+  // Attach button handlers
+  container.querySelectorAll('button[data-action="toggle"]').forEach((btn) => {
+    const inputId = btn.getAttribute('data-input-id');
+    btn.addEventListener('click', () => {
+      toggleUserPassword(inputId);
+      const input = document.getElementById(inputId);
+      if (input && input.type === 'password') {
+        btn.textContent = 'Show';
+      } else {
+        btn.textContent = 'Hide';
+      }
+    });
+  });
+
+  container.querySelectorAll('button[data-action="update"]').forEach((btn) => {
+    const userId = btn.getAttribute('data-user-id');
+    btn.addEventListener('click', () => {
+      if (userId) handleUpdatePassword(parseInt(userId, 10));
+    });
+  });
 }
 
-// === Welcome message and init ===
+// --- Init exported for admin.html ---
 
-function updateWelcomeMessage() {
-  const user = getCurrentUser();
-  const welcomeEl = document.getElementById('welcomeUser');
-  if (welcomeEl && user) {
-    welcomeEl.textContent = `Welcome, ${user.username} (${user.role})`;
+export function initAdminPage() {
+  const addUserBtn = document.getElementById('addUserBtn');
+  if (addUserBtn) {
+    addUserBtn.addEventListener('click', handleCreateUser);
   }
-}
 
-document.addEventListener('DOMContentLoaded', () => {
-  updateWelcomeMessage();
   renderUserList();
-});
+}

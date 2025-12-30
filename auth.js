@@ -1,20 +1,13 @@
 // auth.js
-import { API_BASE_URL } from './config.js';
-import {
-  setAuthToken,
-  clearAuthToken,
-  setCurrentUser,
-  clearCurrentUser,
-} from './common.js';
 
-// Login via /api/auth/login
+import { API_BASE_URL } from './config.js';
+
+// Simple login via /api/login (no JWT)
 async function login(username, password) {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
 
@@ -24,50 +17,25 @@ async function login(username, password) {
     }
 
     const data = await response.json();
-    const token = data.token;
-    const user = data.user;
-
-    if (!token) {
-      throw new Error('No token received');
+    if (!data.success) {
+      throw new Error(data.message || 'Login failed');
     }
 
-    // Store token in sessionStorage (authoritative auth state)
-    setAuthToken(token);
-    // Optionally mirror user info to localStorage for convenience
-    setCurrentUser(user);
+    // Store session user in sessionStorage for the app
+    sessionStorage.setItem(
+      'savUser',
+      JSON.stringify({ username: data.username, role: data.role })
+    );
 
-    return { success: true, user };
+    return { success: true, user: { username: data.username, role: data.role } };
   } catch (error) {
     console.error('Login error:', error);
     return { success: false, message: error.message };
   }
 }
 
-// Logout: clear token and cached user
-function logout() {
-  clearAuthToken();
-  clearCurrentUser();
-  // Optionally clear any other session state
-  sessionStorage.removeItem('currentUser');
-  sessionStorage.removeItem('userRole');
-  sessionStorage.removeItem('userId');
-  // Redirect to login page
-  window.location.href = 'index.html';
-}
-
-// Check if user is authenticated
-function isAuthenticated() {
-  return !!getAuthToken();
-}
-
-// Get current user from localStorage (for UI only, not as source of truth)
-function getCurrentUser() {
-  const userStr = localStorage.getItem('currentUser');
-  return userStr ? JSON.parse(userStr) : null;
-}
-
 // Staff login from modal on index.html
-async function staffLogin() {
+export async function staffLogin() {
   const usernameEl = document.getElementById('staffUsername');
   const passwordEl = document.getElementById('staffPassword');
 
@@ -92,52 +60,33 @@ async function staffLogin() {
 async function publicTrack() {
   const trackingInput = document.getElementById('publicTracking');
   const resultEl = document.getElementById('publicResult');
-
   if (!trackingInput || !resultEl) return;
 
   const tracking = trackingInput.value.trim();
   if (!tracking) {
-    resultEl.innerHTML = '<div class="package-card">Enter a tracking number.</div>';
+    resultEl.innerHTML = 'Please enter a tracking number.';
     return;
   }
 
   try {
-    // Use the tracking endpoint
-    const pkg = await fetch(`${API_BASE_URL}/packages/${tracking}`).then(r => r.json());
+    resultEl.innerHTML = 'Checking...';
 
-    if (pkg && pkg.status === 'pending') {
-      resultEl.innerHTML = `
-        <div class="package-card">
-          <strong>${pkg.tracking || pkg.trackingNumber}</strong><br>
-          ${pkg.name || ''}<br>
-          <small>${pkg.courier || ''}</small><br>
-          <span class="status-badge status-pending">📦 Awaiting Pickup</span>
-        </div>
-      `;
-    } else if (pkg) {
-      resultEl.innerHTML = `
-        <div class="package-card">
-          <strong>${pkg.tracking || pkg.trackingNumber}</strong><br>
-          ${pkg.name || ''}<br>
-          <small>${pkg.courier || ''}</small><br>
-          <span class="status-badge status-signed">✅ ${pkg.status || 'Completed'}</span>
-        </div>
-      `;
-    } else {
-      resultEl.innerHTML = '<div class="package-card">No package found for that tracking number.</div>';
+    const res = await fetch(
+      `${API_BASE_URL}/public-search?tracking=${encodeURIComponent(tracking)}`
+    );
+    if (!res.ok) {
+      resultEl.innerHTML = 'Lookup failed. Please try again.';
+      return;
     }
-  } catch (error) {
-    console.error('Failed to fetch package:', error);
-    resultEl.innerHTML = '<div class="package-card">Error checking tracking number.</div>';
+
+    const data = await res.json();
+    if (!data.packages || data.packages.length === 0) {
+      resultEl.innerHTML = 'No packages found for that tracking number.';
+    } else {
+      resultEl.innerHTML = `${data.packages.length} package(s) found for that tracking number.`;
+    }
+  } catch (e) {
+    console.error('Public track error', e);
+    resultEl.innerHTML = 'Error performing lookup.';
   }
 }
-
-// Export functions used by index.html and other pages
-export {
-  login,
-  logout,
-  isAuthenticated,
-  getCurrentUser,
-  staffLogin,
-  publicTrack,
-};

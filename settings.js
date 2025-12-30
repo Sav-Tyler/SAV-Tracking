@@ -1,148 +1,169 @@
 // settings.js
 
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE_URL } from './config.js';
 
-// -------- Branding --------
+let API_BASE = API_BASE_URL;
 
-async function loadBranding() {
+// ---------- API base URL (LAN vs hosted) ----------
+
+function initApiBaseSection() {
+  const input = document.getElementById('apiBaseUrlInput');
+  if (!input) return;
+
+  const stored = localStorage.getItem('api_base_url');
+  input.value = stored || API_BASE;
+
+  const saveBtn = document.getElementById('saveApiBaseUrlBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      const value = input.value.trim();
+      if (!value) {
+        localStorage.removeItem('api_base_url');
+        API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`;
+        alert('API URL cleared; system will use the current host on port 5000.');
+      } else {
+        if (!value.startsWith('http://') && !value.startsWith('https://')) {
+          alert('URL must start with http:// or https://');
+          return;
+        }
+        if (!value.endsWith('/api')) {
+          alert('URL should end with /api (e.g. https://host.example.com/api).');
+          return;
+        }
+        localStorage.setItem('api_base_url', value);
+        API_BASE = value;
+        alert('API URL saved.');
+      }
+    });
+  }
+}
+
+// ---------- Branding (public tracking page) ----------
+
+async function loadBrandingSection() {
+  const taglineInput = document.getElementById('publicTaglineInput');
+  const logoUrlInput = document.getElementById('logoUrlInput');
+
   try {
     const res = await fetch(`${API_BASE}/settings`);
     if (!res.ok) return;
-
     const settings = await res.json();
-
-    const taglineInput = document.getElementById('taglineInput');
-    const logoPreview = document.getElementById('logoPreview');
-
-    if (taglineInput) {
-      taglineInput.value = settings.tagline || '';
-    }
-
-    if (logoPreview && settings.logo_url) {
-      logoPreview.src = settings.logo_url;
-      logoPreview.style.display = 'inline-block';
-    }
+    if (taglineInput) taglineInput.value = settings.tagline || '';
+    if (logoUrlInput) logoUrlInput.value = settings.logo_url || '';
   } catch (e) {
     console.error('Failed to load branding', e);
   }
 }
 
-async function saveBranding() {
-  const taglineEl = document.getElementById('taglineInput');
-  const fileInput = document.getElementById('logoFileInput');
+async function saveBrandingSection() {
+  const taglineEl = document.getElementById('publicTaglineInput');
+  const logoUrlEl = document.getElementById('logoUrlInput');
+
   const tagline = taglineEl ? taglineEl.value.trim() : '';
+  const logoUrl = logoUrlEl ? logoUrlEl.value.trim() : '';
 
-  // base payload for non-file data
-  const basePayload = { tagline };
+  const payload = { tagline };
+  if (logoUrl) {
+    payload.logo_url = logoUrl;
+  }
 
-  const sendUpdate = async (logoUrl) => {
-    const payload = { ...basePayload };
-    if (logoUrl !== null) payload.logo_url = logoUrl;
-
-    try {
-      await fetch(`${API_BASE}/settings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      alert('Branding updated');
-    } catch (e) {
-      console.error('Failed to save branding', e);
-      alert('Error saving branding');
+  try {
+    const res = await fetch(`${API_BASE}/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      alert('Branding updated.');
+    } else {
+      alert('Failed to save branding.');
     }
-  };
-
-  // If a new file is chosen, read it as data URL (same pattern as old admin.js)
-  if (fileInput && fileInput.files && fileInput.files[0]) {
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const dataUrl = ev.target.result;
-      const preview = document.getElementById('logoPreview');
-      if (preview) {
-        preview.src = dataUrl;
-        preview.style.display = 'inline-block';
-      }
-      await sendUpdate(dataUrl);
-    };
-    reader.readAsDataURL(file);
-  } else {
-    // No new file; backend should keep existing logo if logo_url is omitted / null
-    await sendUpdate(null);
+  } catch (e) {
+    console.error('Failed to save branding', e);
+    alert('Error saving branding.');
   }
 }
 
-// -------- Grandstream Integration --------
+function initBrandingSection() {
+  const btn = document.getElementById('saveBrandingBtn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      saveBrandingSection();
+    });
+  }
+  loadBrandingSection();
+}
 
-async function loadGrandstreamSettings() {
+// ---------- Telephony (Grandstream) ----------
+
+async function loadTelephonySection() {
+  const hostEl = document.getElementById('pbxHostInput');
+  const portEl = document.getElementById('pbxPortInput');
+  const userEl = document.getElementById('pbxUserInput');
+  const passEl = document.getElementById('pbxPasswordInput');
+
   try {
     const res = await fetch(`${API_BASE}/grandstream`);
     if (!res.ok) return;
-
     const data = await res.json();
 
-    const ipEl = document.getElementById('grandstreamIP');
-    const extEl = document.getElementById('grandstreamExt');
-    const userEl = document.getElementById('grandstreamUser');
-    const passEl = document.getElementById('grandstreamPass');
-    const msgEl = document.getElementById('grandstreamMsgID');
-
-    if (ipEl) ipEl.value = data.ip || '';
-    if (extEl) extEl.value = data.extension || '';
+    if (hostEl) hostEl.value = data.ip || '';
+    if (portEl) portEl.value = data.port || data.extension || '';
     if (userEl) userEl.value = data.username || '';
     if (passEl) passEl.value = data.password || '';
-    if (msgEl) msgEl.value = data.message_id || '';
   } catch (e) {
     console.error('Failed to load Grandstream settings', e);
   }
 }
 
-async function saveGrandstreamSettings() {
+async function saveTelephonySection() {
+  const host = document.getElementById('pbxHostInput')?.value.trim() || '';
+  const port = document.getElementById('pbxPortInput')?.value.trim() || '';
+  const user = document.getElementById('pbxUserInput')?.value.trim() || '';
+  const pass = document.getElementById('pbxPasswordInput')?.value || '';
+
   const payload = {
-    ip: document.getElementById('grandstreamIP').value.trim(),
-    extension: document.getElementById('grandstreamExt').value.trim(),
-    username: document.getElementById('grandstreamUser').value.trim(),
-    password: document.getElementById('grandstreamPass').value,
-    message_id: document.getElementById('grandstreamMsgID').value.trim()
+    ip: host,
+    port,
+    username: user,
+    password: pass,
   };
 
   try {
     const res = await fetch(`${API_BASE}/grandstream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
-      alert('Grandstream settings saved');
+      alert('Telephony settings saved.');
     } else {
-      alert('Failed to save Grandstream settings');
+      alert('Failed to save telephony settings.');
     }
   } catch (e) {
-    console.error('Error saving Grandstream settings', e);
-    alert('Error saving Grandstream settings');
+    console.error('Error saving telephony settings', e);
+    alert('Error saving telephony settings.');
   }
 }
 
-async function testGrandstreamConnection() {
-  try {
-    const res = await fetch(`${API_BASE}/grandstream/test`, {
-      method: 'POST'
+function initTelephonySection() {
+  const btn = document.getElementById('saveTelephonyBtn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      saveTelephonySection();
     });
-    if (res.ok) {
-      const data = await res.json();
-      alert(data.message || 'Grandstream connection OK');
-    } else {
-      alert('Grandstream test failed');
-    }
-  } catch (e) {
-    console.error('Error testing Grandstream connection', e);
-    alert('Error testing Grandstream connection');
   }
+  loadTelephonySection();
 }
 
-// -------- Init --------
+// ---------- Page init ----------
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadBranding();
-  loadGrandstreamSettings();
-});
+export function initSettingsPage() {
+  // Refresh API_BASE from localStorage override if present
+  const stored = localStorage.getItem('api_base_url');
+  API_BASE = stored || API_BASE_URL;
+
+  initApiBaseSection();
+  initBrandingSection();
+  initTelephonySection();
+}

@@ -1,15 +1,12 @@
 // archive.js
-import {
-  apiGet,
-  cachePackages,
-  readCachedPackages,
-} from './common.js';
+
+import { apiGet, cachePackages, readCachedPackages } from './common.js';
 
 // Global array for filtering
 let allArchivedPackages = [];
 
 // Load archived packages from API, with cache fallback
-async function loadArchived() {
+export async function loadArchived() {
   const searchTerm = (document.getElementById('archiveFilter')?.value || '')
     .trim()
     .toLowerCase();
@@ -24,7 +21,7 @@ async function loadArchived() {
 
     // Apply search filter
     if (searchTerm) {
-      const filtered = allArchivedPackages.filter(pkg => {
+      const filtered = allArchivedPackages.filter((pkg) => {
         const name = (pkg.name || '').toLowerCase();
         const tracking = (pkg.tracking || '').toLowerCase();
         const phone = (pkg.phone || '').toLowerCase();
@@ -44,13 +41,16 @@ async function loadArchived() {
     console.warn('Failed to load archived packages from API, using cache:', error);
     // On error, fall back to cached data
     allArchivedPackages = readCachedPackages();
+
     // Filter by archived/completed status
-    allArchivedPackages = allArchivedPackages.filter(pkg =>
-      ['archived', 'signed', 'completed'].includes((pkg.status || '').toLowerCase())
+    allArchivedPackages = allArchivedPackages.filter((pkg) =>
+      ['archived', 'signed', 'completed'].includes(
+        (pkg.status || '').toLowerCase()
+      )
     );
 
     if (searchTerm) {
-      const filtered = allArchivedPackages.filter(pkg => {
+      const filtered = allArchivedPackages.filter((pkg) => {
         const name = (pkg.name || '').toLowerCase();
         const tracking = (pkg.tracking || '').toLowerCase();
         const phone = (pkg.phone || '').toLowerCase();
@@ -70,7 +70,7 @@ async function loadArchived() {
 }
 
 // View all archived (no search term)
-async function viewAllArchived() {
+export async function viewAllArchived() {
   try {
     const packages = await apiGet('/packages/archived');
     allArchivedPackages = Array.isArray(packages) ? packages : [];
@@ -79,15 +79,17 @@ async function viewAllArchived() {
   } catch (error) {
     console.warn('Failed to load all archived packages from API, using cache:', error);
     allArchivedPackages = readCachedPackages();
-    allArchivedPackages = allArchivedPackages.filter(pkg =>
-      ['archived', 'signed', 'completed'].includes((pkg.status || '').toLowerCase())
+    allArchivedPackages = allArchivedPackages.filter((pkg) =>
+      ['archived', 'signed', 'completed'].includes(
+        (pkg.status || '').toLowerCase()
+      )
     );
     displayArchivedPackages(allArchivedPackages);
   }
 }
 
 // Apply detailed filters (customer / tracking / status)
-function applyFilters() {
+export function applyFilters() {
   const customerFilter = (document.getElementById('filterCustomer')?.value || '')
     .trim()
     .toLowerCase();
@@ -101,20 +103,18 @@ function applyFilters() {
   let filtered = allArchivedPackages;
 
   if (customerFilter) {
-    filtered = filtered.filter(pkg =>
+    filtered = filtered.filter((pkg) =>
       (pkg.name || '').toLowerCase().includes(customerFilter)
     );
   }
-
   if (trackingFilter) {
-    filtered = filtered.filter(pkg =>
+    filtered = filtered.filter((pkg) =>
       (pkg.tracking || '').toLowerCase().includes(trackingFilter)
     );
   }
-
   if (statusFilter) {
-    filtered = filtered.filter(pkg =>
-      (pkg.status || '').toLowerCase() === statusFilter.toLowerCase()
+    filtered = filtered.filter(
+      (pkg) => (pkg.status || '').toLowerCase() === statusFilter.toLowerCase()
     );
   }
 
@@ -124,105 +124,50 @@ function applyFilters() {
 // Render cards
 function displayArchivedPackages(packages) {
   const container = document.getElementById('archiveList');
-
   if (!container) return;
 
   if (!packages || packages.length === 0) {
-    container.innerHTML = '<div class="no-packages">No archived packages found</div>';
+    container.innerHTML =
+      '<div class="empty-state">No archived packages found for this search.</div>';
     return;
   }
 
-  const html = packages
-    .map(pkg => {
-      const tracking = pkg.tracking || 'N/A';
-      const createdAt = pkg.created_at;
-      const signedAt = pkg.signed_at;
-      const receivedText = createdAt ? new Date(createdAt).toLocaleDateString() : 'N/A';
-      const pickedUpText = signedAt ? new Date(signedAt).toLocaleString() : 'N/A';
-      const statusText = (pkg.status || 'completed').toLowerCase();
+  const rows = packages.map((pkg) => {
+    const tracking = pkg.tracking || '(no tracking)';
+    const name = pkg.name || '(no name)';
+    const phone = pkg.phone || '';
+    const postal = pkg.postal || '';
+    const status = (pkg.status || '').toLowerCase();
+    const created = pkg.signed_at || pkg.created_at || '';
+    const createdLabel = created ? new Date(created).toLocaleString() : '';
 
-      return `
-        <div class="package-card">
-          ${
-            pkg.label_image
-              ? `<img src="${pkg.label_image}" alt="Label" style="max-width: 200px; border-radius: 8px; margin-bottom: 10px;">`
-              : ''
-          }
-          <div class="package-info"><strong>Courier:</strong> ${pkg.courier || ''}</div>
-          <div class="package-info"><strong>Service:</strong> ${pkg.service || ''}</div>
-          <div class="package-info"><strong>Tracking:</strong> ${tracking}</div>
-          <div class="package-info"><strong>Name:</strong> ${pkg.name || ''}</div>
-          <div class="package-info"><strong>Phone:</strong> ${pkg.phone || 'N/A'}</div>
-          <div class="package-info"><strong>Postal:</strong> ${pkg.postal || ''}</div>
-          <div class="package-info"><strong>Weight:</strong> ${pkg.weight || ''}</div>
-          <div class="package-info"><strong>Received:</strong> ${receivedText}</div>
-          <div class="package-info"><strong>Picked Up:</strong> ${pickedUpText}</div>
-          ${
-            pkg.signature || pkg.signature_image
-              ? `
-            <div class="package-info">
-              <strong>Signature:</strong><br>
-              <img src="${pkg.signature || pkg.signature_image}" alt="Signature"
-                   style="max-width: 300px; border: 2px solid #ddd; border-radius: 8px; margin-top: 10px;">
-            </div>
-          `
-              : ''
-          }
-          <span class="status-badge status-signed">✅ ${
-            statusText.charAt(0).toUpperCase() + statusText.slice(1)
-          }</span>
+    let statusLabel = status || 'unknown';
+    let statusClass = 'status-unknown';
+    if (status === 'signed' || status === 'completed') {
+      statusLabel = 'picked up';
+      statusClass = 'status-picked-up';
+    } else if (status === 'sent back') {
+      statusLabel = 'sent back';
+      statusClass = 'status-sent-back';
+    }
+
+    return `
+      <div class="archive-card">
+        <div class="archive-main">
+          <div class="archive-tracking">${tracking}</div>
+          <div class="archive-meta">
+            <span class="archive-name">${name}</span>
+            ${phone ? `<span class="archive-phone">· ${phone}</span>` : ''}
+            ${postal ? `<span class="archive-postal">· ${postal}</span>` : ''}
+          </div>
         </div>
-      `;
-    })
-    .join('');
+        <div class="archive-side">
+          <div class="archive-status ${statusClass}">${statusLabel}</div>
+          <div class="archive-date">${createdLabel}</div>
+        </div>
+      </div>
+    `;
+  });
 
-  container.innerHTML = html;
+  container.innerHTML = rows.join('');
 }
-
-// Optional: cache last filter state for instant re‑filtering
-function saveArchiveFilters() {
-  const searchTerm = document.getElementById('archiveFilter')?.value || '';
-  const customerFilter = document.getElementById('filterCustomer')?.value || '';
-  const trackingFilter = document.getElementById('filterTracking')?.value || '';
-  const statusFilter = document.getElementById('filterStatus')?.value || '';
-
-  const filters = {
-    searchTerm,
-    customerFilter,
-    trackingFilter,
-    statusFilter,
-  };
-  localStorage.setItem('archiveFilters', JSON.stringify(filters));
-}
-
-function restoreArchiveFilters() {
-  const saved = localStorage.getItem('archiveFilters');
-  if (!saved) return;
-
-  try {
-    const filters = JSON.parse(saved);
-    if (document.getElementById('archiveFilter')) {
-      document.getElementById('archiveFilter').value = filters.searchTerm || '';
-    }
-    if (document.getElementById('filterCustomer')) {
-      document.getElementById('filterCustomer').value = filters.customerFilter || '';
-    }
-    if (document.getElementById('filterTracking')) {
-      document.getElementById('filterTracking').value = filters.trackingFilter || '';
-    }
-    if (document.getElementById('filterStatus')) {
-      document.getElementById('filterStatus').value = filters.statusFilter || '';
-    }
-  } catch (e) {
-    console.warn('Failed to restore archive filters:', e);
-  }
-}
-
-// Export functions used by archived.html
-export {
-  loadArchived,
-  viewAllArchived,
-  applyFilters,
-  saveArchiveFilters,
-  restoreArchiveFilters,
-};

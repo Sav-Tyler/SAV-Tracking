@@ -1,5 +1,5 @@
 // dashboard.js
-// OCR intake + API-backed package management + 5‑day warnings + pickup/signatures
+// API-backed package management + 5-day warnings + pickup/signatures
 
 import {
   apiGet,
@@ -7,323 +7,278 @@ import {
   cachePackages,
   readCachedPackages,
 } from './common.js';
-// adjust imports if you name things differently
-import { processLabelFiles } from './ocr.js';
-import { saveSignature as apiSaveSignature } from './signatures.js';
 
+// Local state
+let allPackages = [];
 let pendingPackages = [];
 let selectedPackages = [];
-let signatureCanvas, signatureCtx;
+let signatureCanvas;
+let signatureCtx;
+let isDrawing = false;
 
-// -------- OCR intake (client-side via ocr.js, then POST /api/packages) --------
+// ---------- Helpers ----------
 
-async function processImages() {
+function normalizeStatus(status) {
+  const s = (status || '').toLowerCase();
+  if (s === 'pending') return 'pending';
+  if (s === 'signed' || s === 'picked up') return 'signed';
+  if (s === 'sent back') return 'sent back';
+  return 'pending';
+}
+
+function statusClass(status) {
+  const s = normalizeStatus(status);
+  if (s === 'pending') return 'status-pending';
+  if (s === 'signed') return 'status-signed';
+  if (s === 'sent back') return 'status-sent-back';
+  return 'status-pending';
+}
+
+// ---------- Load & render packages ----------
+
+async function loadPackages() {
   try {
-    const fileInput = document.getElementById('labelImages');
-    const files = Array.from(fileInput.files || []);
-    if (!files.length) {
-      alert('❌ Select images');
-      return;
-    }
-
-    const courier = document.getElementById('courier').value;
-    const processingEl = document.getElementById('processing');
-    processingEl.textContent = '⏳ Processing...';
-
-    pendingPackages = [];
-
-    // OCR in-browser via ocr.js
-    const ocrPackages = await processLabelFiles(files, courier);
-
-    const nowIso = new Date().toISOString();
-    pendingPackages = ocrPackages.map(p => ({
-      courier: p.courier || courier,
-      tracking: p.tracking || '',
-      name: p.name || '',
-      phone: p.phone || '',
-      postal: p.postal || '',
-      label_image: p.label_image || p.labelImage || '',
-      status: 'pending',
-      created_at: p.created_at || nowIso,
-      signed_at: p.signed_at || null,
-      weight: p.weight || '',
-      service: p.service || '',
-      raw_ocr: p.raw_ocr || '',
-    }));
-
-    showPendingPackages();
-    processingEl.textContent = '✅ Done: ' + pendingPackages.length;
-    document.getElementById('continueOrFinish').classList.remove('hidden');
+    const data = await apiGet('/packages');
+    const pkgs = Array.isArray(data) ? data : [];
+    allPackages = pkgs;
+    cachePackages(allPackages);
   } catch (err) {
-    console.error('Fatal:', err);
-    alert('❌ Error: ' + err.message);
-    document.getElementById('processing').textContent = '❌ Error';
+    console.warn('Failed to load packages from API, using cache:', err);
+    allPackages = readCachedPackages();
   }
+
+  pendingPackages = allPackages.filter(
+    (p) => normalizeStatus(p.status) === 'pending'
+  );
+  renderPendingPackages();
+  updateSummary();
 }
 
-function showPendingPackages() {
-  const c = document.getElementById('pendingPackages');
-  if (!c) return;
+function renderPendingPackages() {
+  const list = document.getElementById('pendingPackagesList');
+  if (!list) return;
 
   if (!pendingPackages.length) {
-    c.innerHTML = '';
+    list.innerHTML =
+      '<div style="padding:8px; font-size:12px; color:#9ca3af;">No pending packages.</div>';
     return;
   }
 
-  c.innerHTML = `
-    <h3>Pending Packages</h3>
-    <ul>
-      ${pendingPackages
-        .map(
-          p =>
-            `<li>${p.courier} – ${p.tracking || '(no tracking)'} – ${
-              p.name || 'Unknown'
-            }</li>`
-        )
-        .join('')}
-    </ul>
-    <button class="process-btn" onclick="savePendingToApi()">💾 Save to Server</button>
-  `;
+  list.innerHTML = pendingPackages
+    .map((p) => {
+      const created = p.created_at
+        ? new Date(p.created_at).toLocaleDateString()
+        : '';
+      const s = normalizeStatus(p.status);
+      const cls = statusClass(s);
+      return `
+        <div class="package-row">
+          <div class="pkg-main">
+            <div class="pkg-name">${p.tracking || '(no tracking)'} — ${p.name || ''}</div>
+            <div class="pkg-meta">${p.courier || ''} · ${created}</div>
+          </div>
+          <div class="pkg-status ${cls}">
+            ${s}
+          </div>
+        </div>
+      `;
+    })
+    .join('');
 }
 
-function continueBatch() {
-  const input = document.getElementById('labelImages');
-  const processing = document.getElementById('processing');
-  if (input) input.value = '';
-  if (processing) processing.textContent = '';
+function updateSummary() {
+  const pendingCount = allPackages.filter(
+    (p) => normalizeStatus(p.status) === 'pending'
+  ).length;
+  const signedCount = allPackages.filter(
+    (p) => normalizeStatus(p.status) === 'signed'
+  ).length;
+  const sentBackCount = allPackages.filter(
+    (p) => normalizeStatus(p.status) === 'sent back'
+  ).length;
+
+  const pendingEl = document.getElementById('summaryPending');
+  const signedEl = document.getElementById('summarySigned');
+  const sentBackEl = document.getElementById('summarySentBack');
+
+  if (pendingEl) pendingEl.textContent = pendingCount.toString();
+  if (signedEl) signedEl.textContent = signedCount.toString();
+  if (sentBackEl) sentBackEl.textContent = sentBackCount.toString();
 }
 
-function finishBatch() {
-  const input = document.getElementById('labelImages');
-  const processing = document.getElementById('processing');
-  if (input) input.value = '';
-  if (processing) processing.textContent = 'Batch finished.';
-}
+// ---------- Add packages (manual, minimal) ----------
 
-// Save OCR‑created packages to /api/packages
-async function savePendingToApi() {
-  if (!pendingPackages.length) {
-    alert('No pending packages to save.');
+async function addSinglePackage() {
+  const courier = document.getElementById('courierSelect')?.value || '';
+  const tracking = document.getElementById('trackingInput')?.value.trim() || '';
+  const name = document.getElementById('nameInput')?.value.trim() || '';
+  const phone = document.getElementById('phoneInput')?.value.trim() || '';
+  const postal = document.getElementById('postalInput')?.value.trim() || '';
+  const address = document.getElementById('addressInput')?.value.trim() || '';
+
+  if (!courier || !tracking || !name) {
+    alert('Courier, tracking, and customer name are required.');
     return;
   }
+
+  const payload = {
+    courier,
+    tracking,
+    name,
+    phone,
+    postal,
+    address,
+    status: 'pending',
+  };
 
   try {
-    for (const pkg of pendingPackages) {
-      await apiPost('/packages', pkg);
-    }
+    await apiPost('/packages', payload);
+    // Clear minimal fields after add
+    document.getElementById('trackingInput').value = '';
+    document.getElementById('nameInput').value = '';
+    document.getElementById('phoneInput').value = '';
+    document.getElementById('postalInput').value = '';
+    document.getElementById('addressInput').value = '';
 
-    // Refresh from API and update cache
-    const packages = await apiGet('/packages');
-    cachePackages(packages);
-
-    alert(`✅ Saved ${pendingPackages.length} package(s) to server.`);
-    pendingPackages = [];
-    showPendingPackages();
-    loadShippingSummary();
-  } catch (error) {
-    console.error('Failed to save packages:', error);
-    alert(`Error saving packages: ${error.message}`);
+    await loadPackages();
+    alert('Package added.');
+  } catch (err) {
+    console.error('Failed to add package', err);
+    alert('Could not add package.');
   }
 }
 
-// -------- Customer pickup (search via API, sign via /packages/{id}/sign) --------
+// Placeholder hooks for label photos – these can be extended later.
+function initLabelPhotoButtons() {
+  const take = document.getElementById('takeLabelPhotoBtn');
+  const process = document.getElementById('processLabelBtn');
+  const more = document.getElementById('addMoreLabelBtn');
+  const finish = document.getElementById('finishBatchBtn');
 
-function openCustomerPickup() {
-  document.getElementById('pickupModal').classList.add('active');
-  selectedPackages = [];
-  document.getElementById('packagesDisplay').innerHTML =
-    '<div class="no-packages">Enter search criteria to find packages</div>';
-  document.getElementById('signatureSection').style.display = 'none';
+  if (take) {
+    take.addEventListener('click', () => {
+      alert('Camera capture to be implemented.');
+    });
+  }
+  if (process) {
+    process.addEventListener('click', () => {
+      addSinglePackage();
+    });
+  }
+  if (more) {
+    more.addEventListener('click', () => {
+      alert('Multiple label images to be implemented.');
+    });
+  }
+  if (finish) {
+    finish.addEventListener('click', () => {
+      alert('Batch finish to be implemented.');
+    });
+  }
 }
 
-function closeCustomerPickup() {
-  document.getElementById('pickupModal').classList.remove('active');
-  document.getElementById('signatureSection').style.display = 'none';
-  document.getElementById('packagesDisplay').innerHTML =
-    '<div class="no-packages">Enter search criteria to find packages</div>';
-}
+// ---------- Pickup search & selection ----------
 
-async function searchPackages() {
-  const searchTerm = document
-    .getElementById('customerSearch')
-    .value.trim()
-    .toLowerCase();
-
-  if (!searchTerm) {
-    alert('Please enter a search term');
+function searchPackagesForPickup() {
+  const q =
+    document.getElementById('pickupSearchInput')?.value.trim().toLowerCase() ||
+    '';
+  if (!q) {
+    alert('Enter name, tracking, or phone to search.');
     return;
   }
 
-  try {
-    // Prefer API: get only recent/pending packages if you like, or all
-    const packages = await apiGet('/packages?status=pending');
-    cachePackages(packages);
-    filterAndDisplayPackages(packages, searchTerm);
-  } catch (error) {
-    console.warn('Failed to load packages from API, using cache:', error);
-    const packages = readCachedPackages();
-    filterAndDisplayPackages(packages, searchTerm);
-  }
-}
-
-function filterAndDisplayPackages(allPackages, searchTerm) {
-  const pending = allPackages.filter(pkg => {
-    const status = (pkg.status || 'pending').toLowerCase();
-    return status === 'pending' || status === 'available for pickup';
-  });
-
-  const filtered = pending.filter(pkg => {
-    const name = (pkg.name || '').toLowerCase();
-    const tracking = (pkg.tracking || '').toLowerCase();
-    const phone = (pkg.phone || '').toLowerCase();
-    const postal = (pkg.postal || '').toLowerCase();
+  selectedPackages = allPackages.filter((p) => {
+    const tracking = (p.tracking || '').toLowerCase();
+    const name = (p.name || '').toLowerCase();
+    const phone = (p.phone || '').toLowerCase();
     return (
-      name.includes(searchTerm) ||
-      tracking.includes(searchTerm) ||
-      phone.includes(searchTerm) ||
-      postal.includes(searchTerm)
+      tracking.includes(q) || name.includes(q) || phone.includes(q)
     );
   });
 
-  displayPackages(filtered);
-}
-
-function displayPackages(packages) {
-  const container = document.getElementById('packagesDisplay');
-
-  if (!packages || packages.length === 0) {
-    container.innerHTML =
-      '<div class="no-packages">No packages found for this customer</div>';
+  if (!selectedPackages.length) {
+    alert('No matching packages for this customer.');
     return;
   }
 
-  const html = `
-    <h3 style="margin-bottom: 20px;">📦 Found ${packages.length} Package(s)</h3>
-    <div class="packages-grid">
-      ${packages
-        .map(pkg => {
-          const id = pkg.id;
-          const createdAt = pkg.created_at;
-          const receivedText = createdAt
-            ? new Date(createdAt).toLocaleDateString()
-            : 'N/A';
-          return `
-            <div class="package-card">
-              ${
-                pkg.label_image
-                  ? `<img src="${pkg.label_image}" alt="Label">`
-                  : ''
-              }
-              <div class="package-info">
-                <input type="checkbox" class="select-checkbox"
-                  onchange="togglePackageSelection('${id}', this.checked)"
-                  id="pkg_${id}">
-                <strong>Tracking:</strong> ${pkg.tracking || 'N/A'}
-              </div>
-              <div class="package-info"><strong>Courier:</strong> ${
-                pkg.courier || ''
-              }</div>
-              <div class="package-info"><strong>Name:</strong> ${
-                pkg.name || ''
-              }</div>
-              <div class="package-info"><strong>Phone:</strong> ${
-                pkg.phone || 'N/A'
-              }</div>
-              <div class="package-info"><strong>Postal:</strong> ${
-                pkg.postal || ''
-              }</div>
-              <div class="package-info"><strong>Received:</strong> ${receivedText}</div>
-            </div>
-          `;
-        })
-        .join('')}
-    </div>
-    <button class="search-btn" style="margin-top: 20px;" onclick="showSignatureSection()">
-      Continue to Signature →
-    </button>
-  `;
+  // Pre-fill customer name if available
+  const first = selectedPackages[0];
+  const nameInput = document.getElementById('pickupCustomerName');
+  if (nameInput && first.name) {
+    nameInput.value = first.name;
+  }
 
-  container.innerHTML = html;
+  alert(`Found ${selectedPackages.length} package(s) for pickup.`);
 }
 
-function togglePackageSelection(packageId, selected) {
-  const idStr = String(packageId);
-  if (selected) {
-    if (!selectedPackages.includes(idStr)) {
-      selectedPackages.push(idStr);
+// ---------- Signature pad ----------
+
+function initSignaturePad() {
+  const pad = document.getElementById('signaturePad');
+  if (!pad) return;
+
+  // Create a canvas inside if not present
+  let canvas = pad.querySelector('canvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.width = pad.clientWidth - 20;
+    canvas.height = 140;
+    canvas.style.width = '100%';
+    canvas.style.height = '140px';
+    pad.innerHTML = '';
+    pad.appendChild(canvas);
+  }
+
+  signatureCanvas = canvas;
+  signatureCtx = canvas.getContext('2d');
+  signatureCtx.strokeStyle = '#e5e7eb';
+  signatureCtx.lineWidth = 2;
+  signatureCtx.lineJoin = 'round';
+  signatureCtx.lineCap = 'round';
+
+  const getPos = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    if (e.touches && e.touches.length > 0) {
+      return {
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top,
+      };
     }
-  } else {
-    selectedPackages = selectedPackages.filter(id => id !== idStr);
-  }
-}
-
-function showSignatureSection() {
-  if (selectedPackages.length === 0) {
-    alert('Please select at least one package');
-    return;
-  }
-
-  const section = document.getElementById('signatureSection');
-  section.style.display = 'block';
-
-  signatureCanvas = document.getElementById('signatureCanvas');
-  signatureCtx = signatureCanvas.getContext('2d');
-
-  // Reset canvas listeners by cloning
-  const newCanvas = signatureCanvas.cloneNode(true);
-  signatureCanvas.parentNode.replaceChild(newCanvas, signatureCanvas);
-  signatureCanvas = newCanvas;
-  signatureCtx = signatureCanvas.getContext('2d');
-
-  let drawing = false;
-
-  function getPos(e) {
-    const rect = signatureCanvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
     };
-  }
+  };
 
-  function startDrawing(e) {
-    e.preventDefault();
-    drawing = true;
+  const startDraw = (e) => {
+    isDrawing = true;
     const { x, y } = getPos(e);
     signatureCtx.beginPath();
     signatureCtx.moveTo(x, y);
-  }
-
-  function draw(e) {
-    if (!drawing) return;
     e.preventDefault();
+  };
+
+  const draw = (e) => {
+    if (!isDrawing) return;
     const { x, y } = getPos(e);
     signatureCtx.lineTo(x, y);
-    signatureCtx.strokeStyle = '#000';
-    signatureCtx.lineWidth = 2;
-    signatureCtx.lineCap = 'round';
     signatureCtx.stroke();
-  }
-
-  function stopDrawing(e) {
-    if (!drawing) return;
     e.preventDefault();
-    drawing = false;
-  }
+  };
 
-  signatureCanvas.addEventListener('mousedown', startDrawing);
-  signatureCanvas.addEventListener('mousemove', draw);
-  signatureCanvas.addEventListener('mouseup', stopDrawing);
-  signatureCanvas.addEventListener('mouseout', stopDrawing);
+  const endDraw = () => {
+    isDrawing = false;
+  };
 
-  signatureCanvas.addEventListener('touchstart', startDrawing, {
-    passive: false,
-  });
-  signatureCanvas.addEventListener('touchmove', draw, { passive: false });
-  signatureCanvas.addEventListener('touchend', stopDrawing, { passive: false });
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
 
-  section.scrollIntoView({ behavior: 'smooth' });
+  canvas.addEventListener('touchstart', startDraw, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
+  canvas.addEventListener('touchend', endDraw);
 }
 
 function clearSignature() {
@@ -331,131 +286,80 @@ function clearSignature() {
   signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
 }
 
-async function saveSignature() {
-  if (selectedPackages.length === 0) {
-    alert('No packages selected');
-    return;
-  }
-  if (!signatureCanvas || !signatureCtx) {
-    alert('Signature area not ready');
+async function completePickup() {
+  if (!selectedPackages.length) {
+    alert('Search and select customer packages first.');
     return;
   }
 
-  const signatureData = signatureCanvas.toDataURL('image/png');
-  const blank = document.createElement('canvas');
-  blank.width = signatureCanvas.width;
-  blank.height = signatureCanvas.height;
-  if (signatureData === blank.toDataURL('image/png')) {
-    alert('Please provide a signature');
+  const name =
+    document.getElementById('pickupCustomerName')?.value.trim() || '';
+  if (!name) {
+    alert('Enter customer name.');
     return;
   }
 
-  const customerName = document
-    .getElementById('customerNameInput')
-    .value.trim();
-  const nowIso = new Date().toISOString();
+  let signatureData = null;
+  if (signatureCanvas) {
+    signatureData = signatureCanvas.toDataURL('image/png');
+  }
+
+  const ids = selectedPackages.map((p) => p.id).filter((id) => id != null);
+  if (!ids.length) {
+    alert('No valid package IDs for pickup.');
+    return;
+  }
 
   try {
-    for (const packageId of selectedPackages) {
-      await apiSaveSignature(packageId, {
-        signature_image: signatureData,
-        signed_by: customerName || null,
-        signed_at: nowIso,
-      });
-    }
+    await apiPost('/signatures/complete-pickup', {
+      package_ids: ids,
+      customer_name: name,
+      signature_data: signatureData,
+    });
 
-    // Refresh packages and cache
-    const packages = await apiGet('/packages');
-    cachePackages(packages);
+    clearSignature();
+    selectedPackages = [];
+    document.getElementById('pickupCustomerName').value = '';
 
-    alert(
-      `✅ Successfully completed pickup for ${selectedPackages.length} package(s)!`
-    );
-    closeCustomerPickup();
-    loadShippingSummary();
-  } catch (error) {
-    console.error('Failed to save signatures:', error);
-    alert(`Error saving signatures: ${error.message}`);
+    await loadPackages();
+    alert('Pickup recorded.');
+  } catch (err) {
+    console.error('Pickup failed', err);
+    alert('Could not complete pickup.');
   }
 }
 
-function useScriptelPad() {
-  alert(
-    'Scripttel Signature Pad Integration\n\nTo integrate with Scripttel signature pad:\n\n1. Install Scripttel SDK\n2. Connect pad via USB\n3. Use Scripttel API to capture signature\n\nContact your IT administrator for setup assistance.'
-  );
-}
+// ---------- Init exported ----------
 
-// -------- Shipping summary (API‑first, cache fallback) --------
+export function initDashboard() {
+  // Load packages + summary
+  loadPackages();
 
-async function loadShippingSummary() {
-  const container = document.getElementById('shippingSummary');
-  const content = document.getElementById('shippingSummaryContent');
-  if (!container || !content) return;
+  // Label photo/buttons
+  initLabelPhotoButtons();
 
-  let packages;
-  try {
-    const sinceDays = 5;
-    const since = new Date();
-    since.setDate(since.getDate() - sinceDays);
-    const isoSince = since.toISOString();
-
-    packages = await apiGet(`/packages?since=${isoSince}`);
-    cachePackages(packages);
-  } catch (error) {
-    console.warn('Failed to load summary from API, using cache:', error);
-    packages = readCachedPackages();
+  // Pickup search and signature
+  const searchBtn = document.getElementById('pickupSearchBtn');
+  if (searchBtn) {
+    searchBtn.addEventListener('click', searchPackagesForPickup);
   }
 
-  const summary = {};
+  const clearSigBtn = document.getElementById('clearSignatureBtn');
+  if (clearSigBtn) {
+    clearSigBtn.addEventListener('click', clearSignature);
+  }
 
-  packages.forEach(pkg => {
-    const courier = pkg.courier || 'Unknown';
-    if (!summary[courier]) {
-      summary[courier] = { small: 0, large: 0, total: 0 };
-    }
-    const weight = Number(pkg.weight || pkg.weightLbs || 0);
-    const isLarge = !isNaN(weight) && weight >= 10;
-    if (isLarge) summary[courier].large += 1;
-    else summary[courier].small += 1;
-    summary[courier].total += 1;
-  });
+  const completePickupBtn = document.getElementById('completePickupBtn');
+  if (completePickupBtn) {
+    completePickupBtn.addEventListener('click', completePickup);
+  }
 
-  let html =
-    '<table style="width:100%; border-collapse: collapse;">' +
-    '<tr>' +
-    '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Shipping Company</th>' +
-    '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Small (&lt;10 lbs)</th>' +
-    '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Large (&ge;10 lbs)</th>' +
-    '<th style="border-bottom:1px solid #ccc; text-align:left; padding:8px;">Total</th>' +
-    '</tr>';
+  const scriptelBtn = document.getElementById('scriptelPickupBtn');
+  if (scriptelBtn) {
+    scriptelBtn.addEventListener('click', () => {
+      alert('Scriptel integration to be implemented.');
+    });
+  }
 
-  Object.keys(summary).forEach(company => {
-    const s = summary[company];
-    html += `
-      <tr>
-        <td style="padding:8px; border-bottom:1px solid #eee;">${company}</td>
-        <td style="padding:8px; border-bottom:1px solid #eee;">${s.small}</td>
-        <td style="padding:8px; border-bottom:1px solid #eee;">${s.large}</td>
-        <td style="padding:8px; border-bottom:1px solid #eee;">${s.total}</td>
-      </tr>
-    `;
-  });
-
-  html += '</table>';
-  content.innerHTML = html;
+  initSignaturePad();
 }
-
-// Expose functions used by dashboard.html inline handlers
-window.processImages = processImages;
-window.continueBatch = continueBatch;
-window.finishBatch = finishBatch;
-window.savePendingToApi = savePendingToApi;
-window.openCustomerPickup = openCustomerPickup;
-window.closeCustomerPickup = closeCustomerPickup;
-window.searchPackages = searchPackages;
-window.togglePackageSelection = togglePackageSelection;
-window.showSignatureSection = showSignatureSection;
-window.clearSignature = clearSignature;
-window.saveSignature = saveSignature;
-window.useScriptelPad = useScriptelPad;
-window.loadShippingSummary = loadShippingSummary;

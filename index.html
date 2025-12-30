@@ -2,930 +2,519 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>SAV Package Manager</title>
+  <title>SAV Package Kiosk</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
   <style>
-    :root {
-      --primary: #0891b2;
-      --primary-dark: #0e7490;
-      --accent: #10b981;
-      --danger: #ef4444;
-      --bg: #f3f4f6;
-      --card-bg: #ffffff;
-      --text-main: #111827;
-      --text-muted: #6b7280;
-      --border-soft: #e5e7eb;
-      --shadow-soft: 0 10px 25px rgba(15, 23, 42, 0.08);
-      --shadow-strong: 0 20px 45px rgba(15, 23, 42, 0.12);
-      --radius-lg: 18px;
-      --radius-xl: 24px;
-      --radius-pill: 999px;
-    }
-
-    * {
-      box-sizing: border-box;
+    body.index-page {
+      background: var(--index-page-bg);
+      color: var(--index-text-color);
       margin: 0;
-      padding: 0;
-    }
-
-    body {
       min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, -system-ui, sans-serif;
-      background: radial-gradient(circle at top left, #0f172a 0, #020617 55%);
-      color: var(--text-main);
+    }
+    .hero-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-top: 30px;
+      padding: 0 16px 40px;
+    }
+    .kiosk-card {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--index-tracking-bg, #ffffff);
+      color: var(--index-text-color, #111827);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      overflow: hidden;
+    }
+    .kiosk-header {
+      background: var(--index-header-bg, #0891b2);
+      border-radius: 20px 20px 0 0;
+      padding: 10px 18px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 20px;
+      justify-content: space-between;
+      color: #fff;
     }
-
-    .app-shell {
-      width: 100%;
-      max-width: 1100px;
-      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 55%),
-                  radial-gradient(circle at top right, rgba(16, 185, 129, 0.12), transparent 60%),
-                  linear-gradient(135deg, #020617, #020617);
-      border-radius: 28px;
-      overflow: hidden;
-      box-shadow: var(--shadow-strong);
-      border: 1px solid rgba(148, 163, 184, 0.35);
-      position: relative;
-      isolation: isolate;
+    .kiosk-title {
+      font-weight: 600;
+      font-size: 16px;
     }
-
-    .app-shell::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 10% 0, rgba(56, 189, 248, 0.22), transparent 55%);
-      mix-blend-mode: soft-light;
-      pointer-events: none;
+    .kiosk-subtitle {
+      font-size: 12px;
       opacity: 0.9;
     }
-
-    .app-shell-inner {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      min-height: 620px;
-    }
-
-    .brand-panel {
-      width: 40%;
-      background: radial-gradient(circle at top left, #0f172a 0, #020617 50%),
-                  radial-gradient(circle at 120% 0, #0f172a 0, #020617 55%);
-      color: white;
-      padding: 28px 26px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      border-right: 1px solid rgba(148, 163, 184, 0.4);
-    }
-
-    .brand-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 30px;
-    }
-
-    .brand-lockup {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-logo {
-      width: 40px;
-      height: 40px;
-      border-radius: 14px;
-      background: conic-gradient(from 210deg, #06b6d4, #22c55e, #38bdf8, #06b6d4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #020617;
-      font-weight: 800;
-      font-size: 20px;
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.95), 0 18px 35px rgba(0, 0, 0, 0.6);
-    }
-
-    .brand-title {
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-    }
-
-    .brand-subtitle {
+    .staff-login-link {
       font-size: 12px;
-      opacity: 0.76;
-    }
-
-    .brand-badge {
-      font-size: 11px;
-      padding: 6px 11px;
+      cursor: pointer;
+      background: rgba(15,23,42,0.12);
+      padding: 6px 10px;
       border-radius: 999px;
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(148, 163, 184, 0.7);
       display: inline-flex;
       align-items: center;
       gap: 6px;
     }
-
-    .brand-badge span {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px;
-      height: 16px;
-      border-radius: 999px;
-      background: rgba(34, 197, 94, 0.17);
-      color: #4ade80;
-      font-size: 11px;
+    .staff-login-link span {
+      font-size: 10px;
+      opacity: 0.9;
     }
-
-    .brand-main {
-      margin-bottom: 22px;
+    .kiosk-body {
+      padding: 18px 18px 20px 18px;
+      display: grid;
+      gap: 18px;
     }
-
-    .headline-kicker {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.25em;
-      color: rgba(148, 163, 184, 0.75);
-      margin-bottom: 8px;
+    @media (min-width: 768px) {
+      .kiosk-body {
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1.3fr);
+      }
     }
-
-    .headline {
-      font-size: 26px;
-      line-height: 1.28;
-      font-weight: 700;
-      letter-spacing: 0.01em;
+    .panel {
+      border-radius: 16px;
+      border: 1px solid #e5e7eb;
+      padding: 16px 16px 18px;
+      background: #ffffff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .panel h2 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      color: #111827;
+    }
+    .panel p {
+      margin: 0 0 10px 0;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .field-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
       margin-bottom: 10px;
     }
-
-    .headline span {
-      color: #22c55e;
-    }
-
-    .headline-sub {
-      font-size: 13px;
-      color: rgba(209, 213, 219, 0.92);
-      max-width: 260px;
-    }
-
-    .brand-pill-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 16px;
-    }
-
-    .brand-pill {
-      font-size: 11px;
-      padding: 6px 11px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      background: rgba(15, 23, 42, 0.75);
-      color: rgba(209, 213, 219, 0.9);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .brand-pill i {
-      font-size: 13px;
-    }
-
-    .brand-metrics {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    .metric-card {
-      padding: 11px 12px;
-      border-radius: 14px;
-      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.95));
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.9);
-    }
-
-    .metric-label {
-      font-size: 11px;
-      color: rgba(148, 163, 184, 0.9);
-      margin-bottom: 6px;
-    }
-
-    .metric-value {
-      font-size: 18px;
-      font-weight: 700;
-      display: flex;
-      align-items: baseline;
-      gap: 4px;
-    }
-
-    .metric-value span {
-      font-size: 11px;
-      color: rgba(148, 163, 184, 0.85);
-      font-weight: 500;
-    }
-
-    .metric-footnote {
-      font-size: 10px;
-      color: rgba(148, 163, 184, 0.85);
-      margin-top: 4px;
-    }
-
-    .brand-footer {
-      margin-top: 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: rgba(148, 163, 184, 0.9);
-    }
-
-    .brand-footer span {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .brand-footer small {
-      opacity: 0.75;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: #22c55e;
-      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3);
-    }
-
-    .powered-by {
-      opacity: 0.75;
-    }
-
-    .powered-by strong {
-      color: #38bdf8;
-      font-weight: 600;
-    }
-
-    .auth-panel {
-      width: 60%;
-      padding: 28px 26px;
-      background: radial-gradient(circle at 0 0, rgba(248, 250, 252, 0.1), transparent 55%),
-                  radial-gradient(circle at 150% 0, rgba(56, 189, 248, 0.12), transparent 60%),
-                  linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 0.96));
-      position: relative;
-      color: #e5e7eb;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .auth-panel::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        135deg,
-        rgba(56, 189, 248, 0.07),
-        transparent 30%,
-        transparent 70%,
-        rgba(56, 189, 248, 0.06)
-      );
-      pointer-events: none;
-      opacity: 0.8;
-    }
-
-    .auth-inner {
-      position: relative;
-      z-index: 1;
-    }
-
-    .auth-header {
-      display: flex;
-      justify-content: flex-end;
-      font-size: 11px;
-      color: rgba(148, 163, 184, 0.9);
-      margin-bottom: 12px;
-    }
-
-    .session-indicator {
-      padding: 5px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      background: rgba(15, 23, 42, 0.85);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .session-indicator span {
-      display: inline-flex;
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: #22c55e;
-      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
-    }
-
-    .auth-main-title {
-      margin-bottom: 6px;
-    }
-
-    .auth-main-title h1 {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-      color: #f9fafb;
-    }
-
-    .auth-main-title h1 span {
-      color: #22c55e;
-    }
-
-    .auth-subtitle {
+    .field-row label {
       font-size: 12px;
-      color: rgba(156, 163, 175, 0.95);
-      max-width: 320px;
-      margin-bottom: 18px;
+      color: #374151;
     }
-
-    .tab-row {
-      display: inline-flex;
-      padding: 3px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.78);
-      border: 1px solid rgba(148, 163, 184, 0.65);
-      margin-bottom: 20px;
+    .field-row input {
+      width: 100%;
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
     }
-
-    .tab-btn {
+    .hint {
       font-size: 11px;
+      color: #9ca3af;
+    }
+    .primary-btn {
+      width: 100%;
+      margin-top: 4px;
+      padding: 10px 14px;
       border-radius: 999px;
-      padding: 6px 12px;
       border: none;
-      background: transparent;
-      color: rgba(148, 163, 184, 0.9);
+      background: linear-gradient(135deg, #22c55e, #0ea5e9);
+      color: #020617;
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
-      transition: all 0.18s ease;
+      box-shadow: 0 10px 25px rgba(34, 197, 94, 0.4);
     }
-
-    .tab-btn span {
+    .primary-btn:hover {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+    .results-summary {
       font-size: 13px;
+      margin-bottom: 6px;
+      color: #111827;
     }
-
-    .tab-btn.active {
-      background: radial-gradient(circle at top left, #22c55e, #0ea5e9);
-      color: #020617;
-      font-weight: 600;
+    .results-meta {
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 8px;
     }
-
-    .auth-body {
-      margin-bottom: 18px;
+    .package-list {
+      max-height: 260px;
+      overflow-y: auto;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      padding: 6px;
+      background: #f9fafb;
     }
-
-    .auth-card {
-      background: rgba(15, 23, 42, 0.96);
-      border-radius: 18px;
-      padding: 18px 18px 16px;
-      border: 1px solid rgba(148, 163, 184, 0.55);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9);
-    }
-
-    .form-group {
-      margin-bottom: 14px;
-    }
-
-    .form-label {
+    .package-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
       font-size: 12px;
-      color: rgba(209, 213, 219, 0.98);
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
-
-    .form-label span.helper {
+    .pkg-track {
+      font-weight: 600;
+      color: #111827;
+    }
+    .pkg-status {
       font-size: 11px;
-      color: rgba(156, 163, 175, 0.95);
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: capitalize;
     }
-
-    .input-wrapper {
+    .status-pending {
+      background: rgba(249, 115, 22, 0.1);
+      color: #ea580c;
+    }
+    .status-sent-back {
+      background: rgba(239, 68, 68, 0.1);
+      color: #b91c1c;
+    }
+    .status-picked-up {
+      background: rgba(34, 197, 94, 0.1);
+      color: #15803d;
+    }
+    .status-unknown {
+      background: rgba(148, 163, 184, 0.12);
+      color: #4b5563;
+    }
+    .staff-login-card {
+      border-radius: 14px;
+      border: 1px solid #e5e7eb;
+      padding: 14px 14px 12px;
+      background: #f9fafb;
+      margin-top: 10px;
+      display: none;
+    }
+    .staff-login-card.visible {
+      display: block;
+    }
+    .staff-login-row {
+      margin-bottom: 10px;
+    }
+    .staff-label {
+      font-size: 12px;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+    .password-wrapper {
       position: relative;
     }
-
-    .input-icon {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 14px;
-      color: rgba(148, 163, 184, 0.95);
-    }
-
-    .form-input {
+    .password-wrapper input {
       width: 100%;
-      padding: 9px 10px 9px 30px;
-      border-radius: 11px;
-      border: 1px solid rgba(75, 85, 99, 0.9);
-      background: rgba(15, 23, 42, 0.96);
-      color: #e5e7eb;
-      font-size: 13px;
-      outline: none;
-      transition: all 0.18s ease;
-      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+      padding-right: 70px;
     }
-
-    .form-input::placeholder {
-      color: rgba(107, 114, 128, 0.9);
-    }
-
-    .form-input:focus {
-      border-color: #0ea5e9;
-      box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.8), 0 0 0 4px rgba(14, 165, 233, 0.35);
-    }
-
     .password-toggle {
       position: absolute;
-      right: 10px;
+      right: 8px;
       top: 50%;
       transform: translateY(-50%);
       border: none;
       background: none;
-      color: rgba(148, 163, 184, 0.95);
-      cursor: pointer;
-      font-size: 12px;
-      padding: 2px;
-    }
-
-    .form-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       font-size: 11px;
-      color: rgba(148, 163, 184, 0.95);
-      margin-top: 2px;
-    }
-
-    .checkbox-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      color: #6b7280;
       cursor: pointer;
     }
-
-    .checkbox-label input {
-      width: 13px;
-      height: 13px;
-      border-radius: 3px;
-      border: 1px solid rgba(107, 114, 128, 0.95);
-      background: rgba(15, 23, 42, 0.96);
-    }
-
-    .checkbox-label span {
-      font-size: 11px;
-    }
-
-    .link-inline {
-      color: #38bdf8;
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .link-inline:hover {
-      text-decoration: underline;
-    }
-
-    .submit-row {
-      margin-top: 14px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .primary-btn {
-      flex: 1;
+    .staff-login-btn {
+      width: 100%;
+      margin-top: 4px;
+      padding: 8px 12px;
       border-radius: 999px;
       border: none;
-      padding: 9px 16px;
+      background: linear-gradient(135deg, #0ea5e9, #0369a1);
+      color: #f9fafb;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      background: linear-gradient(135deg, #22c55e, #0ea5e9);
-      color: #020617;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      box-shadow: 0 12px 30px rgba(34, 197, 94, 0.4);
-      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
     }
-
-    .primary-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 16px 40px rgba(34, 197, 94, 0.55);
-      filter: brightness(1.05);
-    }
-
-    .primary-btn:active {
-      transform: translateY(0);
-      box-shadow: 0 9px 20px rgba(34, 197, 94, 0.4);
-    }
-
-    .primary-btn span.icon {
-      font-size: 15px;
-    }
-
-    .hint-text {
-      font-size: 10px;
-      color: rgba(156, 163, 175, 0.98);
-      max-width: 200px;
-    }
-
-    .hint-text strong {
-      color: #e5e7eb;
-      font-weight: 600;
-    }
-
-    .divider {
-      margin: 16px 0 10px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: rgba(107, 114, 128, 0.95);
+    .timeout-banner {
       font-size: 11px;
-    }
-
-    .divider::before,
-    .divider::after {
-      content: "";
-      flex: 1;
-      height: 1px;
-      background: radial-gradient(circle, rgba(148, 163, 184, 0.6), transparent 70%);
-    }
-
-    .shortcut-row {
-      font-size: 11px;
-      color: rgba(148, 163, 184, 0.95);
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .kbd {
-      padding: 2px 6px;
-      border-radius: 6px;
-      border: 1px solid rgba(75, 85, 99, 0.9);
-      background: rgba(15, 23, 42, 0.92);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 10px;
-      color: rgba(156, 163, 175, 0.98);
-    }
-
-    .auth-footer {
-      position: relative;
-      z-index: 1;
-      margin-top: 8px;
-      font-size: 11px;
-      color: rgba(148, 163, 184, 0.95);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .auth-footer a {
-      color: #38bdf8;
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .auth-footer a:hover {
-      text-decoration: underline;
-    }
-
-    .version-pill {
-      padding: 3px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(75, 85, 99, 0.9);
-      background: rgba(15, 23, 42, 0.95);
-      font-size: 10px;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .version-pill span {
-      width: 6px;
-      height: 6px;
-      border-radius: 999px;
-      background: #22c55e;
-    }
-
-    @media (max-width: 900px) {
-      .app-shell-inner {
-        flex-direction: column;
-      }
-
-      .brand-panel,
-      .auth-panel {
-        width: 100%;
-      }
-
-      .brand-panel {
-        border-right: none;
-        border-bottom: 1px solid rgba(148, 163, 184, 0.35);
-      }
-    }
-
-    @media (max-width: 640px) {
-      body {
-        padding: 12px;
-      }
-
-      .app-shell {
-        border-radius: 22px;
-      }
-
-      .brand-panel {
-        padding: 22px 20px;
-      }
-
-      .auth-panel {
-        padding: 22px 20px 18px;
-      }
+      color: #6b7280;
+      margin-top: 4px;
     }
   </style>
 </head>
-<body>
-  <div class="app-shell">
-    <div class="app-shell-inner">
-      <!-- Brand Panel -->
-      <aside class="brand-panel">
+<body class="index-page">
+  <div class="hero-wrapper">
+    <div style="text-align:center;">
+      <img id="logoImage" src="" alt="Store logo" style="max-width:260px; max-height:80px; display:none;">
+      <div id="taglineText" style="margin-top:6px; font-size:13px; color:#e5e7eb;"></div>
+    </div>
+
+    <div class="kiosk-card">
+      <div class="kiosk-header">
         <div>
-          <div class="brand-top">
-            <div class="brand-lockup">
-              <div class="brand-logo">S</div>
-              <div>
-                <div class="brand-title">Superior Audio &amp; Video</div>
-                <div class="brand-subtitle">Customer Package Manager</div>
-              </div>
-            </div>
-            <div class="brand-badge">
-              <span>●</span>
-              In-store pickup
-            </div>
+          <div class="kiosk-title">Customer Package Lookup</div>
+          <div class="kiosk-subtitle">Enter any of your details to see if packages are waiting.</div>
+        </div>
+        <div>
+          <button id="staffLoginToggle" class="staff-login-link" type="button">
+            Staff login
+            <span>tap to sign in</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="kiosk-body">
+        <div class="panel" id="lookupPanel">
+          <h2>Find your packages</h2>
+          <p>Enter your tracking number or your name/phone/postal. Matching packages will be listed below.</p>
+
+          <div class="field-row">
+            <label for="trackingInput">Tracking number</label>
+            <input id="trackingInput" type="text" autocomplete="off" placeholder="Optional – leave blank if you don't know it">
           </div>
 
-          <div class="brand-main">
-            <div class="headline-kicker">STAFF PORTAL</div>
-            <div class="headline">
-              Unified package intake<br>
-              <span>and customer pickups.</span>
-            </div>
-            <div class="headline-sub">
-              Fast OCR intake and accurate signatures for your customers’ shipments — designed for in-store kiosks.
-            </div>
-
-            <div class="brand-pill-row">
-              <div class="brand-pill"><i>⚡</i> OCR label intake</div>
-              <div class="brand-pill"><i>✍️</i> Digital signatures</div>
-              <div class="brand-pill"><i>📦</i> Multi-courier tracking</div>
-              <div class="brand-pill"><i>🕒</i> 5‑day hold metrics</div>
-            </div>
-
-            <div class="brand-metrics">
-              <div class="metric-card">
-                <div class="metric-label">Today’s Intake</div>
-                <div class="metric-value">
-                  <span id="metric-intake">0</span>
-                  <span>labels scanned</span>
-                </div>
-                <div class="metric-footnote" id="metric-intake-sub">
-                  Login to begin OCR intake.
-                </div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-label">Ready for Pickup</div>
-                <div class="metric-value">
-                  <span id="metric-ready">0</span>
-                  <span>packages</span>
-                </div>
-                <div class="metric-footnote" id="metric-ready-sub">
-                  Dashboard shows last 5 days by courier.
-                </div>
-              </div>
-            </div>
+          <div class="field-row">
+            <label for="nameInput">Your name</label>
+            <input id="nameInput" type="text" autocomplete="off" placeholder="Optional – first and/or last name">
           </div>
+
+          <div class="field-row">
+            <label for="phoneInput">Phone number</label>
+            <input id="phoneInput" type="tel" autocomplete="off" placeholder="Optional – number used when shipping">
+          </div>
+
+          <div class="field-row">
+            <label for="postalInput">Postal code</label>
+            <input id="postalInput" type="text" autocomplete="off" placeholder="Optional – e.g. P5A 1A1">
+          </div>
+
+          <div class="hint">
+            You may fill any single field or a combination. Results will reset automatically after 45 seconds of no activity.
+          </div>
+
+          <button id="lookupButton" class="primary-btn" type="button">
+            Check my packages
+          </button>
         </div>
 
-        <div class="brand-footer">
-          <span><span class="status-dot"></span> POS station ready</span>
-          <span class="powered-by">Powered by <strong>Superior Audio &amp; Video</strong></span>
-        </div>
-      </aside>
-
-      <!-- Auth Panel -->
-      <main class="auth-panel">
-        <div class="auth-inner">
-          <div class="auth-header">
-            <div class="session-indicator">
-              <span></span>
-              Secure staff login
+        <div>
+          <div class="panel" id="resultsPanel">
+            <h2>Results</h2>
+            <div class="results-summary" id="resultsSummary">
+              No search yet. Enter your details and press “Check my packages”.
+            </div>
+            <div class="results-meta" id="resultsMeta"></div>
+            <div class="package-list" id="packageList"></div>
+            <div class="timeout-banner" id="timeoutBanner" style="display:none;">
+              For your privacy, this screen will clear shortly due to inactivity.
             </div>
           </div>
 
-          <div class="auth-main-title">
-            <h1>Sign in to <span>SAV</span> dashboard</h1>
-          </div>
-          <div class="auth-subtitle">
-            Use your staff credentials to access the package manager, customer pickups, and shipping summary.
-          </div>
-
-          <div class="tab-row" aria-label="Auth mode toggle">
-            <button class="tab-btn active" type="button">
-              <span>👤</span> Staff login
-            </button>
-            <button class="tab-btn" type="button" disabled style="opacity:0.5; cursor:not-allowed;">
-              <span>👑</span> Admin console
-            </button>
-          </div>
-
-          <section class="auth-body">
-            <div class="auth-card">
-              <form id="loginForm">
-                <div class="form-group">
-                  <label class="form-label" for="username">
-                    Username
-                    <span class="helper">Ask manager if you don't have one</span>
-                  </label>
-                  <div class="input-wrapper">
-                    <span class="input-icon">👤</span>
-                    <input
-                      type="text"
-                      id="username"
-                      class="form-input"
-                      placeholder="e.g. sav_clerk"
-                      autocomplete="username"
-                      required
-                    >
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="password">
-                    Password
-                    <span class="helper">Never share this with customers</span>
-                  </label>
-                  <div class="input-wrapper">
-                    <span class="input-icon">🔒</span>
-                    <input
-                      type="password"
-                      id="password"
-                      class="form-input"
-                      placeholder="Enter password"
-                      autocomplete="current-password"
-                      required
-                    >
-                    <button
-                      type="button"
-                      class="password-toggle"
-                      aria-label="Toggle password visibility"
-                      onclick="togglePasswordVisibility()"
-                    >
-                      Show
-                    </button>
-                  </div>
-                  <div class="form-row">
-                    <label class="checkbox-label">
-                      <input type="checkbox" id="rememberMe">
-                      <span>Remember on this station</span>
-                    </label>
-                    <a href="#" class="link-inline" onclick="alert('Contact your manager to reset your password.')">
-                      Forgot password?
-                    </a>
-                  </div>
-                </div>
-
-                <div class="submit-row">
-                  <button type="submit" class="primary-btn">
-                    <span class="icon">➡️</span>
-                    Sign in to dashboard
-                  </button>
-                  <div class="hint-text">
-                    Tip: Use <strong>Tab ↹</strong> to move between fields, <strong>Enter ↵</strong> to submit.
-                  </div>
-                </div>
-              </form>
-
-              <div class="divider">
-                Or use these shortcuts
-              </div>
-
-              <div class="shortcut-row">
-                <span>
-                  Staff: <span class="kbd">sav_clerk / demo123</span>
-                </span>
-                <span>
-                  Admin: <span class="kbd">admin / demo123</span>
-                </span>
+          <div class="staff-login-card" id="staffLoginCard">
+            <div class="staff-login-row">
+              <div class="staff-label">Username</div>
+              <input id="staffUsername" type="text" autocomplete="off" placeholder="Staff username">
+            </div>
+            <div class="staff-login-row">
+              <div class="staff-label">Password</div>
+              <div class="password-wrapper">
+                <input id="staffPassword" type="password" autocomplete="off" placeholder="Password">
+                <button id="passwordToggle" type="button" class="password-toggle">Show</button>
               </div>
             </div>
-          </section>
+            <button id="staffLoginButton" type="button" class="staff-login-btn">Sign in</button>
+          </div>
         </div>
-
-        <footer class="auth-footer">
-          <div>
-            Questions? <a href="#" onclick="alert('See your manager or system administrator for help.')">View quick start guide</a>
-          </div>
-          <div class="version-pill">
-            <span></span>
-            v1.0 · Local kiosk
-          </div>
-        </footer>
-      </main>
+      </div>
     </div>
   </div>
 
-  <script src="common.js"></script>
-  <script>
-    // Toggle password visibility
-    function togglePasswordVisibility() {
-      const input = document.getElementById('password');
-      const btn = document.querySelector('.password-toggle');
-      if (input.type === 'password') {
-        input.type = 'text';
-        btn.textContent = 'Hide';
-      } else {
-        input.type = 'password';
-        btn.textContent = 'Show';
-      }
+  <script type="module">
+    import { API_BASE_URL } from './config.js';
+    import { apiGet } from './common.js';
+    import { staffLogin } from './auth.js';
+
+    window.API_BASE_URL = API_BASE_URL;
+
+    const trackingInput = document.getElementById('trackingInput');
+    const nameInput = document.getElementById('nameInput');
+    const phoneInput = document.getElementById('phoneInput');
+    const postalInput = document.getElementById('postalInput');
+    const lookupButton = document.getElementById('lookupButton');
+
+    const resultsSummary = document.getElementById('resultsSummary');
+    const resultsMeta = document.getElementById('resultsMeta');
+    const packageList = document.getElementById('packageList');
+    const timeoutBanner = document.getElementById('timeoutBanner');
+
+    const staffLoginToggle = document.getElementById('staffLoginToggle');
+    const staffLoginCard = document.getElementById('staffLoginCard');
+    const staffUsername = document.getElementById('staffUsername');
+    const staffPassword = document.getElementById('staffPassword');
+    const staffLoginButton = document.getElementById('staffLoginButton');
+    const passwordToggle = document.getElementById('passwordToggle');
+
+    const logoImage = document.getElementById('logoImage');
+    const taglineText = document.getElementById('taglineText');
+
+    let inactivityTimer = null;
+    let warningTimer = null;
+    const TIMEOUT_MS = 45000;
+
+    function resetResults() {
+      resultsSummary.textContent = 'No search yet. Enter your details and press “Check my packages”.';
+      resultsMeta.textContent = '';
+      packageList.innerHTML = '';
+      timeoutBanner.style.display = 'none';
     }
 
-    // Prefill demo credentials (you can remove this in production)
-    document.addEventListener('DOMContentLoaded', () => {
-      const usernameInput = document.getElementById('username');
-      const passwordInput = document.getElementById('password');
-      usernameInput.value = 'sav_clerk';
-      passwordInput.value = 'demo123';
+    function formatStatus(status) {
+      const s = (status || '').toLowerCase();
+      if (s === 'pending') return { label: 'pending', cls: 'status-pending' };
+      if (s === 'sent back') return { label: 'sent back', cls: 'status-sent-back' };
+      if (s === 'signed' || s === 'picked up') return { label: 'picked up', cls: 'status-picked-up' };
+      return { label: status || 'unknown', cls: 'status-unknown' };
+    }
 
-      // Load simple metrics from localStorage (if any)
-      const packages = getPackages();
-      const today = new Date().toISOString().slice(0, 10);
-      const todaysIntake = packages.filter(p => (p.created_at || '').startsWith(today)).length;
-      const readyForPickup = packages.filter(p => (p.status || '').toLowerCase() === 'pending').length;
+    function renderResults(data) {
+      const pkgs = Array.isArray(data.packages) ? data.packages : [];
+      const count = pkgs.length;
 
-      document.getElementById('metric-intake').textContent = todaysIntake;
-      document.getElementById('metric-ready').textContent = readyForPickup;
-
-      document.getElementById('metric-intake-sub').textContent =
-        todaysIntake > 0
-          ? 'Great work! Keep scanning labels.'
-          : 'Login and start your first intake batch.';
-      document.getElementById('metric-ready-sub').textContent =
-        readyForPickup > 0
-          ? 'Tap Customer Pickup in the dashboard to sign for releases.'
-          : 'No pending pickups right now.';
-    });
-
-    // Login form handler
-    const loginForm = document.getElementById('loginForm');
-    loginForm.addEventListener('submit', event => {
-      event.preventDefault();
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const rememberMe = document.getElementById('rememberMe').checked;
-
-      const user = authenticateUser(username, password);
-      if (!user) {
-        alert('Invalid username or password');
+      if (count === 0) {
+        resultsSummary.textContent = 'No matching packages were found.';
+        resultsMeta.textContent = 'Check the spelling or try a different detail (tracking, phone, or postal code).';
+        packageList.innerHTML = '';
         return;
       }
 
-      const sessionData = {
-        username: user.username,
-        role: user.role,
-        rememberMe
-      };
+      const pendingCount = pkgs.filter(p => (p.status || '').toLowerCase() === 'pending').length;
 
-      sessionStorage.setItem('savUser', JSON.stringify(sessionData));
-      if (rememberMe) {
-        localStorage.setItem('savUserRemember', JSON.stringify(sessionData));
-      } else {
-        localStorage.removeItem('savUserRemember');
+      resultsSummary.textContent = `${count} package(s) found for your details.`;
+      resultsMeta.textContent = `${pendingCount} pending · others may be picked up or sent back.`;
+
+      packageList.innerHTML = pkgs.map(p => {
+        const { label, cls } = formatStatus(p.status);
+        const created = p.created_at ? new Date(p.created_at).toLocaleString() : '';
+        return `
+          <div class="package-row">
+            <div>
+              <div class="pkg-track">${p.tracking || '(no tracking)'}</div>
+              <div style="font-size:10px; color:#6b7280;">${created}</div>
+            </div>
+            <div class="pkg-status ${cls}">${label}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function performLookup() {
+      const tracking = trackingInput.value.trim();
+      const name = nameInput.value.trim();
+      const phone = phoneInput.value.trim();
+      const postal = postalInput.value.trim();
+
+      if (!tracking && !name && !phone && !postal) {
+        alert('Please enter at least one detail (tracking, name, phone, or postal).');
+        return;
       }
 
-      window.location.href = 'dashboard.html';
+      try {
+        resultsSummary.textContent = 'Searching...';
+        resultsMeta.textContent = '';
+        packageList.innerHTML = '';
+
+        const params = new URLSearchParams();
+        if (tracking) params.append('tracking', tracking);
+        if (name) params.append('name', name);
+        if (phone) params.append('phone', phone);
+        if (postal) params.append('postal', postal);
+
+        const res = await apiGet(`/public-search?${params.toString()}`);
+        renderResults(res);
+        startInactivityTimer();
+      } catch (err) {
+        console.error('Lookup failed', err);
+        resultsSummary.textContent = 'Unable to search at the moment.';
+        resultsMeta.textContent = 'Please ask a staff member for assistance.';
+      }
+    }
+
+    function clearInactivityTimers() {
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+      }
+      if (warningTimer) {
+        clearTimeout(warningTimer);
+        warningTimer = null;
+      }
+      timeoutBanner.style.display = 'none';
+    }
+
+    function startInactivityTimer() {
+      clearInactivityTimers();
+      warningTimer = setTimeout(() => {
+        timeoutBanner.style.display = 'block';
+      }, TIMEOUT_MS - 10000);
+      inactivityTimer = setTimeout(() => {
+        resetResults();
+      }, TIMEOUT_MS);
+    }
+
+    function registerActivity() {
+      if (inactivityTimer || warningTimer) {
+        clearInactivityTimers();
+        startInactivityTimer();
+      }
+    }
+
+    function toggleStaffLoginCard() {
+      const visible = staffLoginCard.classList.contains('visible');
+      if (visible) {
+        staffLoginCard.classList.remove('visible');
+      } else {
+        staffLoginCard.classList.add('visible');
+        staffUsername.focus();
+      }
+    }
+
+    function togglePasswordVisibility() {
+      if (staffPassword.type === 'password') {
+        staffPassword.type = 'text';
+        passwordToggle.textContent = 'Hide';
+      } else {
+        staffPassword.type = 'password';
+        passwordToggle.textContent = 'Show';
+      }
+    }
+
+    async function loadBranding() {
+      try {
+        const settings = await apiGet('/settings');
+        if (settings.logo_url && logoImage) {
+          logoImage.src = settings.logo_url;
+          logoImage.style.display = 'block';
+        }
+        if (settings.tagline && taglineText) {
+          taglineText.textContent = settings.tagline;
+        }
+      } catch (e) {
+        console.warn('Could not load branding settings', e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      resetResults();
+      loadBranding();
+
+      lookupButton.addEventListener('click', performLookup);
+      staffLoginToggle.addEventListener('click', toggleStaffLoginCard);
+      passwordToggle.addEventListener('click', togglePasswordVisibility);
+      staffLoginButton.addEventListener('click', staffLogin);
+
+      ['click','mousemove','keydown','touchstart'].forEach(ev => {
+        document.addEventListener(ev, registerActivity, { passive: true });
+      });
     });
   </script>
 </body>

@@ -1,8 +1,10 @@
 // common.js
+
 import { API_BASE_URL } from './config.js';
 
 // === Auth helpers ===
 
+// Token-based helpers (optional; currently not used by login)
 function getAuthToken() {
   return sessionStorage.getItem('authToken');
 }
@@ -15,16 +17,20 @@ function clearAuthToken() {
   sessionStorage.removeItem('authToken');
 }
 
+// Current user stored as JSON (used by auth.js via savUser)
 function getCurrentUser() {
-  const userStr = localStorage.getItem('currentUser');
+  const userStr = sessionStorage.getItem('savUser') || localStorage.getItem('currentUser');
   return userStr ? JSON.parse(userStr) : null;
 }
 
 function setCurrentUser(user) {
+  // Prefer sessionStorage for active session; keep localStorage for legacy compatibility
+  sessionStorage.setItem('savUser', JSON.stringify(user));
   localStorage.setItem('currentUser', JSON.stringify(user));
 }
 
 function clearCurrentUser() {
+  sessionStorage.removeItem('savUser');
   localStorage.removeItem('currentUser');
 }
 
@@ -55,7 +61,6 @@ async function apiRequest(path, options = {}) {
       throw new Error(errorData.message || `HTTP ${response.status}`);
     }
 
-    // Return null for 204 No Content
     if (response.status === 204) {
       return null;
     }
@@ -120,41 +125,39 @@ function readCachedSettings() {
   return cached ? JSON.parse(cached) : {};
 }
 
-// === Legacy auth check (for protected pages) ===
+// === Auth check for protected pages ===
 
 function checkAuth() {
-  const username = sessionStorage.getItem('currentUser');
-  const role = sessionStorage.getItem('userRole');
+  const user = getCurrentUser();
 
-  // If not logged in, send back to login page
-  if (!username) {
+  if (!user || !user.username) {
     window.location.href = 'index.html';
     return null;
   }
 
-  // Some pages show a "Welcome, user" span
   const welcomeEl = document.getElementById('welcomeUser');
   if (welcomeEl) {
-    welcomeEl.textContent = 'Welcome, ' + username;
+    welcomeEl.textContent = `Welcome, ${user.username}`;
   }
 
-  // Some pages have an Admin button that should only show for admins
   const adminBtn = document.getElementById('adminBtn');
-  if (adminBtn && role === 'admin') {
+  if (adminBtn && user.role === 'admin') {
     adminBtn.classList.remove('hidden');
   }
 
-  return { username, role };
+  return { username: user.username, role: user.role };
 }
 
 function logout() {
-  sessionStorage.removeItem('currentUser');
+  clearAuthToken();
+  clearCurrentUser();
   sessionStorage.removeItem('userRole');
   sessionStorage.removeItem('userId');
   window.location.href = 'index.html';
 }
 
 // Export all helpers
+
 export {
   // Auth
   getAuthToken,
@@ -163,13 +166,11 @@ export {
   getCurrentUser,
   setCurrentUser,
   clearCurrentUser,
-
   // API
   apiGet,
   apiPost,
   apiPut,
   apiDelete,
-
   // Cache
   cachePackages,
   readCachedPackages,
@@ -177,8 +178,7 @@ export {
   readCachedCustomers,
   cacheSettings,
   readCachedSettings,
-
-  // Legacy
+  // Auth check / logout
   checkAuth,
   logout,
 };
