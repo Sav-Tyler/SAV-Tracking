@@ -104,30 +104,46 @@ function updateSummary() {
   if (sentBackEl) sentBackEl.textContent = sentBackCount.toString();
 }
 
-async function openCameraCapture() {
+function openCameraCapture() {
+  console.log('openCameraCapture called');
   try {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    // Note: 'capture' attribute only works on mobile browsers
-    // For development/desktop, users can still select files
-    // Mobile users will get camera option when available
+    input.style.display = 'none';
+    
+    // Check if mobile
     const userAgent = navigator.userAgent.toLowerCase();
     const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+    console.log('Is mobile:', isMobile);
     
     if (isMobile) {
       input.capture = 'environment';
     }
     
-    input.onchange = async (e) => {
+    input.onchange = function(e) {
+      console.log('File selected:', e.target.files[0]?.name);
       const file = e.target.files[0];
-      if (!file) return;
+      if (!file) {
+        console.warn('No file selected');
+        return;
+      }
       capturedPhotoBlob = file;
       displayCapturedPhoto(file);
       showToast('📸 Photo loaded! Click "Process" to extract label data.', 3000);
+      document.body.removeChild(input);
     };
     
-    input.click();
+    // Add to DOM and click
+    document.body.appendChild(input);
+    console.log('Input element created and appended');
+    
+    // Use setTimeout to ensure it's in the DOM before clicking
+    setTimeout(() => {
+      console.log('Triggering file picker');
+      input.click();
+    }, 50);
+    
   } catch (error) {
     console.error('File picker error:', error);
     showToast('❌ Could not open file picker. Check browser permissions.', 4000);
@@ -314,11 +330,20 @@ function initLabelPhotoButtons() {
   const more = document.getElementById('addMoreLabelBtn');
   const finish = document.getElementById('finishBatchBtn');
   
+  console.log('Initializing photo buttons:', { take, process, more, finish });
+  
   if (take) {
-    take.addEventListener('click', openCameraCapture);
+    take.addEventListener('click', (e) => {
+      console.log('Take photo button clicked');
+      e.preventDefault();
+      e.stopPropagation();
+      openCameraCapture();
+    });
   }
   if (process) {
-    process.addEventListener('click', async () => {
+    process.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       if (capturedPhotoBlob) {
         await processLabelPhoto();
       } else {
@@ -327,7 +352,9 @@ function initLabelPhotoButtons() {
     });
   }
   if (more) {
-    more.addEventListener('click', () => {
+    more.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       showToast('📋 Ready for next label!', 3000);
       capturedPhotoBlob = null;
       const photoPreview = document.querySelector('[data-photo-preview]');
@@ -335,7 +362,11 @@ function initLabelPhotoButtons() {
     });
   }
   if (finish) {
-    finish.addEventListener('click', showBatchReport);
+    finish.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showBatchReport();
+    });
   }
 }
 
@@ -553,7 +584,7 @@ export function initDashboard() {
   const scriptelBtn = document.getElementById('scriptelPickupBtn');
   if (scriptelBtn) {
     scriptelBtn.addEventListener('click', () => {
-      showToast('🖊️ Scriptel integration coming soon!', 3000);
+      showToast('🔧 Scriptel integration coming soon!', 3000);
     });
   }
   initSignaturePad();
