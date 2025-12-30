@@ -39,7 +39,8 @@ def login():
     # Check password (supports both plain text 'password' field and hashed 'password_hash')
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     
-    if user['password'] == password or user['password_hash'] == password_hash:        return jsonify({
+    if user['password'] == password or user['password_hash'] == password_hash:
+        return jsonify({
             'success': True,
             'username': user['username'],
             'role': user['role']
@@ -419,6 +420,5 @@ if __name__ == '__main__':
     init_db()
     add_package_columns_if_missing()
     app.run(host='0.0.0.0', port=5000, debug=True)
-
 
 
