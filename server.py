@@ -10,7 +10,7 @@ from paddleocr import PaddleOCR
 import re
 import requests
 
-app = Flask(__name__, static_folder='.')
+app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
 @app.route('/')
@@ -390,3 +390,4 @@ if __name__ == '__main__':
     init_db()
     add_package_columns_if_missing()
     app.run(host='127.0.0.1', port=5000, debug=True)
+
