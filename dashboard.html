@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SAV Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@v4/dist/tesseract.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+    }
+    .dashboard-shell {
+      display: flex;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 220px;
+      background: #020617;
+      border-right: 1px solid #1f2937;
+      padding: 16px 12px;
+      box-sizing: border-box;
+    }
+    .sidebar h1 {
+      font-size: 18px;
+      margin: 0 0 16px;
+      font-weight: 600;
+    }
+    .nav-section {
+      margin-bottom: 16px;
+    }
+    .nav-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #e5e7eb;
+    }
+    .nav-link:hover {
+      background: #0f172a;
+    }
+    .nav-link span.icon {
+      opacity: 0.8;
+    }
+    .nav-link.sub {
+      padding-left: 20px;
+      font-size: 12px;
+    }
+    .main {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #1f2937;
+      background: #020617;
+    }
+    .topbar-left {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: none;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      color: #0b1120;
+    }
+    .btn-secondary {
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #1f2937;
+    }
+    .content {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 2fr 1.6fr;
+      gap: 16px;
+    }
+    .card {
+      background: #020617;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      padding: 14px 14px 18px;
+      box-sizing: border-box;
+    }
+    .card h2 {
+      font-size: 15px;
+      margin: 0 0 8px;
+      font-weight: 600;
+    }
+    .card p {
+      font-size: 12px;
+      color: #9ca3af;
+      margin: 0 0 8px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+    select,
+    input[type="text"],
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      background: #020617;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      padding: 6px 8px;
+      color: #e5e7eb;
+      font-size: 12px;
+      outline: none;
+    }
+    select:focus,
+    input[type="text"]:focus,
+    textarea:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.3);
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .col-6 {
+      flex: 1 1 48%;
+    }
+    .col-12 {
+      flex: 1 1 100%;
+    }
+    .photo-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .photo-tile {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      background: #020617;
+      border: 1px solid #1f2937;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .photo-tile span {
+      font-size: 11px;
+      color: #9ca3af;
+      text-align: center;
+      padding: 2px 4px 0;
+    }
+    .signature-pad {
+      border-radius: 10px;
+      border: 1px dashed #374151;
+      background: #020617;
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      font-size: 12px;
+    }
+    .package-list {
+      max-height: 260px;
+      overflow-y: auto;
+      margin-top: 8px;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      background: #020617;
+    }
+    .package-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 8px;
+      border-bottom: 1px solid #111827;
+      font-size: 12px;
+    }
+    .package-row:last-child {
+      border-bottom: none;
+    }
+    .pkg-main {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .pkg-name {
+      font-weight: 500;
+    }
+    .pkg-meta {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+    .pkg-status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .status-pending {
+      background: rgba(234,179,8,0.15);
+      color: #eab308;
+    }
+    .status-signed {
+      background: rgba(34,197,94,0.15);
+      color: #22c55e;
+    }
+    .status-sent-back {
+      background: rgba(248,113,113,0.15);
+      color: #f97316;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .summary-card {
+      background: #020617;
+      border-radius: 10px;
+      border: 1px solid #1f2937;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+    .summary-label {
+      color: #9ca3af;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+    .summary-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    @media (max-width: 900px) {
+      .dashboard-shell {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #1f2937;
+      }
+      .content {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <h1>📦 SAV Dashboard</h1>
+
+      <div class="nav-section">
+        <div class="nav-section-title">Admin</div>
+        <div class="nav-link" id="adminBtn">
+          <span class="icon">🔐</span>
+          <span>Admin ▾</span>
+        </div>
+        <div class="nav-link sub" id="navUsers">
+          <span class="icon">👥</span>
+          <span>User Management</span>
+        </div>
+        <div class="nav-link sub" id="navSettings">
+          <span class="icon">⚙️</span>
+          <span>Settings</span>
+        </div>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-section-title">History</div>
+        <div class="nav-link">
+          <span class="icon">📂</span>
+          <span>Archived ▾</span>
+        </div>
+        <div class="nav-link sub" id="navArchivedSearch">
+          <span class="icon">🔍</span>
+          <span>Search Archived</span>
+        </div>
+        <div class="nav-link sub" id="navArchivedAll">
+          <span class="icon">📊</span>
+          <span>View All</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <span id="welcomeUser">Welcome, User</span>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-secondary" type="button" id="logoutBtn">🚪 Logout</button>
+        </div>
+      </header>
+
+      <section class="content">
+        <!-- Left column: Add packages / OCR -->
+        <div>
+          <div class="card">
+            <h2>Add Packages (OCR)</h2>
+            <p>Scan incoming packages and capture customer details automatically.</p>
+
+            <div class="row">
+              <div class="col-6">
+                <label for="courierSelect">Courier:</label>
+                <select id="courierSelect">
+                  <option value="Purolator">Purolator</option>
+                  <option value="FedEx">FedEx</option>
+                  <option value="UPS">UPS</option>
+                  <option value="Dragonfly">Dragonfly</option>
+                  <option value="Intelecom">Intelecom</option>
+                  <option value="ICS">ICS</option>
+                  <option value="Canpar">Canpar</option>
+                  <option value="Canada Post">Canada Post</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="col-6">
+                <label for="trackingInput">Tracking</label>
+                <input type="text" id="trackingInput" placeholder="Scan or type tracking number">
+              </div>
+              <div class="col-6">
+                <label for="nameInput">Customer name</label>
+                <input type="text" id="nameInput" placeholder="Customer name from label">
+              </div>
+              <div class="col-6">
+                <label for="phoneInput">Phone</label>
+                <input type="text" id="phoneInput" placeholder="Phone (optional)">
+              </div>
+              <div class="col-6">
+                <label for="postalInput">Postal code</label>
+                <input type="text" id="postalInput" placeholder="Postal code">
+              </div>
+              <div class="col-6">
+                <label for="addressInput">Address</label>
+                <input type="text" id="addressInput" placeholder="Street or full address">
+              </div>
+            </div>
+
+            <div style="margin-top: 10px;">
+              <label>Label Photos:</label>
+              <div class="photo-grid">
+                <div class="photo-tile" id="takeLabelPhotoBtn">
+                  <div>
+                    <div>📸</div>
+                    <span>Take Photo</span>
+                  </div>
+                </div>
+                <div class="photo-tile" id="processLabelBtn">
+                  <div>
+                    <div>🚀</div>
+                    <span>Process</span>
+                  </div>
+                </div>
+                <div class="photo-tile" id="addMoreLabelBtn">
+                  <div>
+                    <div>➕</div>
+                    <span>More</span>
+                  </div>
+                </div>
+                <div class="photo-tile" id="finishBatchBtn">
+                  <div>
+                    <div>✅</div>
+                    <span>Finish</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Customer pickup and search -->
+          <div class="card" style="margin-top: 16px;">
+            <h2>✍️ Customer Pickup</h2>
+            <p>Look up packages and record pickup signatures.</p>
+
+            <div class="row">
+              <div class="col-12">
+                <label for="pickupSearchInput">🔍 Search Customer</label>
+                <input type="text" id="pickupSearchInput" placeholder="Name, tracking, or phone">
+                <button class="btn btn-primary" type="button" id="pickupSearchBtn">Search</button>
+                <p style="font-size:11px; color:#9ca3af; margin-top:4px;">
+                  Enter search criteria to find packages.
+                </p>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top: 10px;">
+              <div class="col-12">
+                <label>✍️ Customer Signature</label>
+                <label for="pickupCustomerName" style="margin-top:4px;">Customer Name:</label>
+                <input type="text" id="pickupCustomerName" placeholder="Customer name for receipt">
+
+                <label for="pickupPhotoInput" style="margin-top:8px;">Optional Photo (ID or Package):</label>
+                <div class="photo-tile" id="pickupPhotoBtn">
+                  <div>
+                    <div>📸</div>
+                    <span>Tap to take a photo with your device camera</span>
+                  </div>
+                </div>
+
+                <div style="margin-top:8px;">
+                  <div class="signature-pad" id="signaturePad">
+                    Please have the customer sign below using touch or stylus
+                  </div>
+                  <div style="margin-top:6px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button class="btn btn-secondary" type="button" id="clearSignatureBtn">🗑️ Clear</button>
+                    <button class="btn btn-primary" type="button" id="completePickupBtn">✅ Complete Pickup</button>
+                    <button class="btn btn-secondary" type="button" id="scriptelPickupBtn">🖊️ Use Scripttel Signature Pad</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column: pending packages and summary -->
+        <div>
+          <div class="card">
+            <h2>Pending Packages</h2>
+            <p>Packages waiting for pickup.</p>
+            <div class="package-list" id="pendingPackagesList">
+              <!-- Filled by dashboard.js -->
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 16px;">
+            <h2>Shipping Summary</h2>
+            <div class="summary-grid">
+              <div class="summary-card">
+                <div class="summary-label">Pending</div>
+                <div class="summary-value" id="summaryPending">0</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">Picked up</div>
+                <div class="summary-value" id="summarySigned">0</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-label">Sent back</div>
+                <div class="summary-value" id="summarySentBack">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { checkAuth, logout as commonLogout } from './common.js';
+    import './config.js';
+    import './auth.js';
+    import { initDashboard } from './dashboard.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = checkAuth();
+      if (!user) return;
+
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+          commonLogout();
+        });
+      }
+
+      // Navigation links
+      document.getElementById('navUsers')?.addEventListener('click', () => {
+        window.location.href = 'admin.html';
+      });
+      document.getElementById('navSettings')?.addEventListener('click', () => {
+        window.location.href = 'settings.html';
+      });
+      document.getElementById('navArchivedSearch')?.addEventListener('click', () => {
+        window.location.href = 'archived.html';
+      });
+      document.getElementById('navArchivedAll')?.addEventListener('click', () => {
+        window.location.href = 'archived.html';
+      });
+
+      initDashboard();
+    });
+  </script>
+</body>
+</html>
