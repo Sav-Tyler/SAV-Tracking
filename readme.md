@@ -202,3 +202,197 @@ For hosted HTTPS deployment, place Flask behind a reverse proxy (e.g. Nginx) wit
   - Backend and frontend architecture.
   - Grandstream integration, branding, and API base URL configuration.
   - File-by-file structure of the project. [file:117][file:110]
+
+
+
+---
+
+## Comprehensive Code Map & File Dependencies
+
+This section provides detailed information about each file's purpose, key code locations, and how files connect to each other.
+
+### Core Configuration Files
+
+#### config.js
+**Purpose:** Central API configuration  
+**Location:** Root directory  
+**Key Code:**
+- Lines 1-6: Computes `DEFAULT_API_BASE_URL` from current browser location
+- Line 8: Allows localStorage override via `api_base_url` key  
+- Line 9: Exports `API_BASE_URL` used by all frontend API calls
+
+**Dependencies:** 
+- Imported by: `common.js`
+- Used by: All JavaScript files making API calls
+
+**Connection:** This file enables the app to work on LAN (http://192.168.x.x:5000) or HTTPS hosting by auto-detecting the current URL protocol and hostname.
+
+#### common.js  
+**Purpose:** Shared utilities for API calls, auth, and caching  
+**Location:** Root directory  
+**Key Code:**
+- Lines 1-2: Imports `API_BASE_URL` from config.js
+- Lines 5-29: Auth token and user management (sessionStorage/localStorage)
+- Lines 32-73: API request wrapper functions (`apiGet`, `apiPost`, `apiPut`, `apiDelete`)
+- Lines 76-98: Cache helpers for packages, customers, settings
+- Lines 101-117: `checkAuth()` validates user session on protected pages
+- Lines 119-124: `logout()` clears all session data
+
+**Dependencies:**
+- Imports: `config.js`  
+- Imported by: `dashboard.js`, `customers.js`, `admin.js`, `settings.js`, `archive.js`, `signatures.js`
+
+**Connection:** Acts as the central bridge between frontend pages and the Flask backend, ensuring all API calls use consistent authentication and error handling.
+
+### Backend (Python/Flask)
+
+#### server.py
+**Purpose:** Flask REST API backend with SQLite database  
+**Location:** Root directory  
+**Key Code Sections:**
+- Lines 1-9: Imports (Flask, CORS, sqlite3, hashlib, datetime, PaddleOCR, etc.)
+- Lines 11-12: Flask app initialization with CORS
+- Lines 20-42: `/api/login` endpoint for staff authentication
+- Lines 48-56: Database configuration and Grandstream defaults
+- Lines 59-78: Database helper functions (`get_db()`, `init_db()`)
+- Lines 80-143: Table creation for users, customers, packages, pickups, settings
+- Lines 145-162: `add_package_columns_if_missing()` handles DB migration
+- Lines 164-178: Settings management (`get_setting()`, `set_setting()`)
+- Lines 180-198: Postal code and address normalization for Elliot Lake
+- Lines 201-217: GET `/api/packages` - Fetch all packages
+- Lines 219-246: POST `/api/packages` - Add new package
+- Lines 249-276: `/api/public-search` - Public tracking search
+- Lines 279-304: POST `/api/signatures/complete-pickup` - Complete pickup with signature
+- Lines 307-318: GET/POST `/api/settings` - Branding and system settings
+- Lines 321-382: Grandstream integration (GET/POST `/api/grandstream`, `/api/call/customer/<id>`, `/api/call/bulk`)
+- Lines 384-387: App startup with `init_db()` and migration
+
+**Dependencies:**
+- Uses: SQLite database `packages.db`
+- Exposes: REST API on port 5000
+- Integrates: PaddleOCR for server-side OCR (currently imported but not fully utilized)
+
+**Connection:** This is the core backend that all frontend pages communicate with via `common.js` API helpers.
+
+### Frontend Pages & Scripts
+
+#### dashboard.html + dashboard.js
+**Purpose:** Main staff interface for package intake, OCR processing, and customer pickup  
+**Locations:** Root directory  
+**Key Code in dashboard.html:**
+- Line 319: `<input id="labelPhotoInput">` - Hidden file input for OCR camera (mobile capture)
+- Line 320: `<input id="pickupPhotoInput">` - Hidden file input for pickup photos
+- Lines 321-552: Dashboard HTML structure with sidebar, forms, signature pad
+
+**Key Code in dashboard.js:**
+- Lines 1-4: Imports from common.js, toast.js, ocr.js
+- Lines 6-13: State variables (allPackages, pendingPackages, selectedPackages, etc.)
+- Lines 27-41: `loadPackages()` - Fetches packages from `/api/packages`
+- Lines 43-77: `renderPendingPackages()` - Displays pending package list
+- Lines 79-98: `updateSummary()` - Updates dashboard metrics
+- Lines 100-110: `openCameraCapture()` - Triggers labelPhotoInput for OCR
+- Lines 112-127: `handleLabelPhotoSelect()` - Handles photo selection
+- Lines 129-143: `openPickupPhoto()` + `handlePickupPhotoSelect()` - Pickup photo handling
+- Lines 163-224: `processLabelPhoto()` - OCR processing with Tesseract.js, weight calculation
+- Lines 226-288: `extractFieldsFromText()` - Text parsing for tracking, name, postal, phone
+- Lines 290-331: `addSinglePackage()` - Saves package to backend via POST `/api/packages`
+- Lines 333-397: `initLabelPhotoButtons()` - Wires up all button event listeners
+- Lines 399-446: `showBatchReport()` - Displays batch processing summary
+- Lines 448-465: `searchPackagesForPickup()` - Searches packages by tracking/name/phone
+- Lines 467-519: `initSignaturePad()` - Touch/mouse signature canvas setup
+- Lines 521-527: `clearSignature()` - Clears signature canvas
+- Lines 529-561: `completePickup()` - Submits pickup via POST `/api/signatures/complete-pickup`
+- Lines 563-586: `initDashboard()` - Main initialization function
+
+**Dependencies:**
+- Imports: `common.js` (API helpers), `toast.js` (notifications), `ocr.js` (label processing)
+- Calls APIs: `/api/packages`, `/api/signatures/complete-pickup`
+- Uses external: Tesseract.js for OCR
+
+**Connection:** This is the primary staff interface. It connects photo capture → OCR processing → backend storage → pickup workflow.
+
+#### toast.js
+**Purpose:** Non-blocking notification system  
+**Location:** Root directory  
+**Key Code:**
+- Lines 1-38: `showToast(message, duration)` function creates temporary notification overlays
+- Line 6: Default 3-second duration if not specified
+- Lines 12-29: Creates styled div element with message
+- Lines 31-35: Auto-removal after duration (unless duration=0 for persistent)
+
+**Dependencies:**
+- Imported by: `dashboard.js` and other frontend scripts
+
+**Connection:** Provides user feedback for API operations, OCR processing, validation errors.
+
+#### auth.js
+**Purpose:** Login page initialization  
+**Location:** Root directory  
+**Key Code:**
+- Lines 1-30: Handles index.html login form submission
+- Calls: POST `/api/login` via common.js
+- Redirects to dashboard.html on successful authentication
+
+**Dependencies:**
+- Imports: `common.js` for `apiPost`, `setCurrentUser`
+
+**Connection:** Entry point for staff authentication, validates credentials against server.py `/api/login` endpoint.
+
+### Key File Connections Summary
+
+```
+User Browser
+    ↓
+  index.html + auth.js
+    ↓ (login)
+  POST /api/login → server.py
+    ↓ (success)
+  dashboard.html + dashboard.js
+    ↓
+  ├─→ config.js (API_BASE_URL)
+  ├─→ common.js (apiGet, apiPost, checkAuth)
+  ├─→ toast.js (showToast)
+  ├─→ ocr.js (processLabelFiles) 
+  └─→ Tesseract.js (external OCR)
+    ↓
+  API Requests:
+    ├─→ GET /api/packages
+    ├─→ POST /api/packages  
+    ├─→ POST /api/signatures/complete-pickup
+    └─→ GET /api/settings
+    ↓
+  server.py (Flask)
+    ↓
+  packages.db (SQLite)
+```
+
+### Mobile Camera Implementation
+
+**Critical Fix Applied (Dec 30, 2025):**
+Added missing `labelPhotoInput` element in dashboard.html line 319. Both camera inputs now use `capture="environment"` attribute to launch mobile rear camera directly:
+
+- **Line 319:** `<input type="file" id="labelPhotoInput" accept="image/*" capture="environment" style="display:none;">`
+- **Line 320:** `<input type="file" id="pickupPhotoInput" accept="image/*" capture="environment" style="display:none;">`
+
+These hidden inputs are triggered by dashboard.js functions `openCameraCapture()` (line 100) and `openPickupPhoto()` (line 129).
+
+### Testing & Deployment
+
+**To update local repository:**
+```bash
+cd /path/to/SAV-Tracking
+git pull origin main
+# Restart Flask server
+python server.py
+```
+
+**Production checklist:**
+1. Update `config.js` or use admin panel to set HTTPS API URL
+2. Configure Grandstream settings via settings.html
+3. Set branding (logo, colors, tagline) via settings.html  
+4. Test mobile camera on actual mobile device
+5. Verify OCR processing with real labels
+
+---
+
+*Last updated: December 30, 2025*
