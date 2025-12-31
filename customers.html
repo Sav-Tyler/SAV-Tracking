@@ -204,11 +204,31 @@
   </div>
 
   <script type="module">
-    import { checkAuth } from './common.js';
+    import { checkAuth, logout as commonLogout } from './common.js';
+    import './config.js';
+    import './auth.js';
     import { initCustomersPage } from './customers.js';
 
     document.addEventListener('DOMContentLoaded', () => {
-      checkAuth();
+      const user = checkAuth();
+      if (!user) return;
+
+      // Wire up logout button
+      document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        commonLogout();
+      });
+
+      // Wire up navigation
+      document.getElementById('adminBtn')?.addEventListener('click', () => {
+        window.location.href = 'admin.html';
+      });
+      document.getElementById('dashboardBtn')?.addEventListener('click', () => {
+        window.location.href = 'dashboard.html';
+      });
+      document.getElementById('settingsBtn')?.addEventListener('click', () => {
+        window.location.href = 'settings.html';
+      });
+
       initCustomersPage();
     });
   </script>

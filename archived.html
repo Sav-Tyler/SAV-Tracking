@@ -262,11 +262,33 @@
   </div>
 
   <script type="module">
-    import { checkAuth } from './common.js';
+    import { checkAuth, logout as commonLogout } from './common.js';
+    import './config.js';
+    import './auth.js';
     import { loadArchived, viewAllArchived, applyFilters } from './archive.js';
 
     document.addEventListener('DOMContentLoaded', () => {
-      checkAuth();
+      const user = checkAuth();
+      if (!user) return;
+
+      // Wire up logout button
+      document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        commonLogout();
+      });
+
+      // Wire up navigation
+      document.getElementById('dashboardBtn')?.addEventListener('click', () => {
+        window.location.href = 'dashboard.html';
+      });
+      document.getElementById('customersBtn')?.addEventListener('click', () => {
+        window.location.href = 'customers.html';
+      });
+      document.getElementById('adminBtn')?.addEventListener('click', () => {
+        window.location.href = 'admin.html';
+      });
+      document.getElementById('settingsBtn')?.addEventListener('click', () => {
+        window.location.href = 'settings.html';
+      });
 
       document.getElementById('archiveSearchBtn')?.addEventListener('click', loadArchived);
       document.getElementById('archiveViewAllBtn')?.addEventListener('click', viewAllArchived);
@@ -274,11 +296,12 @@
       document.getElementById('archiveFilter')?.addEventListener('input', loadArchived);
       document.getElementById('filterCustomer')?.addEventListener('input', applyFilters);
       document.getElementById('filterTracking')?.addEventListener('input', applyFilters);
-      document.getElementById('filterStatus')?.addEventListener('change', applyFilters);
+      document.getElementById('filterPhone')?.addEventListener('input', applyFilters);
+      document.getElementById('filterPostal')?.addEventListener('input', applyFilters);
 
-      // initial load
-      viewAllArchived();
+      loadArchived();
     });
+  </script>
   </script>
 </body>
 </html>

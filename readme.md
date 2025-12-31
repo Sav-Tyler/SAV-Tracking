@@ -1,398 +1,200 @@
-# SAV-Tracking – Retail Store Parcel Tracking
-
-SAV-Tracking is a parcel tracking and pickup management app for retail stores that receive and hold customer packages. It uses a central Flask + SQLite API backend with a browser-based frontend that talks to the API via a configurable `API_BASE_URL`. [file:109][file:110][file:112]
+SAV-Tracking – Retail Store Parcel Tracking
+SAV-Tracking is a parcel tracking and pickup management app for retail stores that receive and hold customer packages. It uses a central Flask + SQLite API backend with a browser-based frontend that talks to the API via a configurable API_BASE_URL.
 
-## What this app offers
+What this app offers
+OCR-based label scanning (Tesseract.js in the browser) to auto-fill courier, customer name, phone, postal code, and other fields before saving packages to the API.
 
-- OCR-based label scanning (Tesseract.js in the browser) to auto-fill courier, customer name, phone, postal code, and other fields before saving packages to the API. [file:106][file:116]
-- Customer profile management with a **profile lock** flag so OCR and intake do not overwrite trusted customer details. [file:109]
-- Package lifecycle: intake (pending), aging (5+ days pending), pickup with signature, archival for search, reporting, and signature viewing. [file:106][file:109][file:111]
-- Shipping metadata: shipping company, shipping service, and normalized package weight in pounds (kg inputs are automatically converted). [file:109][file:116]
-- End-of-batch shipping summary: packages grouped by shipping company with counts of Small (<10 lbs) and Large (≥10 lbs) packages. [file:109][file:110]
-- Public tracking page for customers to check if their package is available for pickup. [file:107][file:110]
-- Admin pages for user management, Grandstream integration settings, branding (logo, tagline, colours), and API base URL configuration for LAN vs HTTPS. [file:110][file:112][file:114]
+Customer profile management with a profile lock flag so OCR and intake do not overwrite trusted customer details.
 
-## Architecture overview
+Package lifecycle: intake (pending), aging (5+ days pending), pickup with signature collection, archival for search and reporting.
 
-### Backend (Flask + SQLite)
+Shipping metadata: shipping company, shipping service, and normalized package weight in pounds (kg inputs are automatically converted).
 
-- `server.py` runs a Flask app exposing REST endpoints under `/api` for:
-  - Login and users: `/api/login`, `/api/users`, `/api/users/<username>/password`. [file:109]
-  - Customers: `/api/customers`, `/api/customers/<id>`, `/api/customers/<id>/packages`. [file:109]
-  - Packages: `/api/packages`, `/api/packages/pending`, `/api/packages/old`, `/api/packages/<id>`, `/api/packages/<id>/sign`, `/api/packages/bulk-status`, `/api/packages/archived`, `/api/track/<tracking_number>`. [file:109]
-  - Pickups & signatures: `/api/pickups`, `/api/pickups/bulk`. [file:109]
-  - Reports: `/api/reports/shipping-summary`. [file:109]
-  - Settings: `/api/settings` (branding, colours, Grandstream, etc.). [file:109][file:114]
-  - Grandstream calling: `/api/call/customer/<id>`, `/api/call/bulk`. [file:109]
-- Data is stored in `packages.db` (SQLite), created and migrated automatically by `init_db()` and `add_package_columns_if_missing()`. [file:109]
+End-of-batch shipping summary: packages grouped by shipping company with counts of Small (<10 lbs) and Large (≥10 lbs) packages.
 
-### Frontend (static HTML/JS/CSS)
+Public tracking page for customers to check if their package is available for pickup.
 
-- All JS code that talks to the backend uses a configurable `API_BASE_URL` defined in `config.js` and wrapped by helpers in `common.js`. [file:112][file:110]
-- Core shared files:
-  - `config.js`: defines `API_BASE_URL` (e.g. `http://192.168.1.10:5000/api` or `https://sub.example.com/api`). [file:110]
-  - `common.js`: exports auth helpers, API helpers (`apiGet`, `apiPost`, `apiPut`, `apiDelete`), and simple localStorage caches for packages/customers/settings. [file:112]
-  - `styles.css`: shared styling for index, dashboard, admin, customers, settings, etc. [file:113]
-- Key pages:
-  - `index.html`: staff login and small status metrics; calls the API via shared JS. [file:107][file:112]
-  - `dashboard.html` + `dashboard.js`: package intake, OCR-assisted entry, pending and 5-day-old views, and shipping summary. [file:106][file:110]
-  - `customers.html` + `customers.js`: customer CRUD via `/api/customers` with caching. [file:110]
-  - `admin.html` + `admin.js`: user management via `/api/users` and API base URL configuration for LAN/HTTPS. [file:110]
-  - `settings.html`: branding colours, logo, tagline, and Grandstream settings stored via `/api/settings`. [file:114][file:109]
-  - `signatures.html`: read-only signature and pickup history viewer via `/api/pickups` and `/api/customers/<id>/packages`. [file:111][file:109]
-  - `ocr.js`: Tesseract.js wrapper and courier-specific text parsing to produce package objects compatible with the backend schema. [file:116]
+Admin pages for user management, Grandstream integration settings, branding (logo, tagline, colours), and API base URL configuration for LAN vs HTTPS.
 
-## Grandstream UCM6302A integration
+Architecture overview
+Backend (Flask + SQLite)
+server.py runs a Flask app exposing REST endpoints under /api and serves the main HTML files.
 
-The app can trigger automated outbound calls using a Grandstream UCM6302A PBX to notify customers about package availability. [file:109][file:110]
+Key responsibilities:
 
-### Configure in Settings
+Flask app setup, CORS, and static file serving.
 
-1. Sign in as an admin and open `settings.html`. [file:114]
-2. In **Grandstream UCM Settings**, fill in:
-   - Grandstream IP (e.g. `192.168.1.100`). [file:114]
-   - Admin username and password. [file:114]
-   - Extension for outbound calls (e.g. `8000`). [file:114]
-   - Recording ID (ID of the prerecorded pickup message). [file:114]
-3. Click **Save Grandstream Settings**. [file:114]
-4. Use **Test Call** with a customer ID to verify basic connectivity. [file:114]
+SQLite connection management via get_db() and init_db().
 
-These values are stored in the `settings` table and used by `/api/call/customer/<id>` and `/api/call/bulk`, so you do not need to edit `server.py` when configuration changes. [file:109]
+Business logic for packages, customers, users, settings, and click-to-call.
 
-## Branding: logo, colours, and tagline
+OCR integration using PaddleOCR (server-side label processing if used).
 
-### Logo and tagline
+Key endpoints observed:
 
-- `settings.html` lets admins configure:
-  - Logo URL or data URL (used on the public tracking/index page). [file:114][file:107]
-  - Tagline text shown under the logo. [file:114][file:107]
-- Settings are saved via `/api/settings` and cached in localStorage for fast load. [file:109][file:112][file:114]
-
-### Colours
-
-- The same page controls CSS variables used in `styles.css` for:
-  - `--index-text-color`
-  - `--index-header-bg`
-  - `--index-page-bg`
-  - `--index-tracking-bg`
-  - `--index-staff-bar-bg` [file:113][file:114]
-- Changes take effect on the public tracking display after refresh.
-
-## API base URL (LAN vs HTTPS)
-
-- `config.js` defines the default `API_BASE_URL` (e.g. LAN `http://192.168.1.10:5000/api`). [file:110]
-- Admins can adjust the API URL when moving from LAN to a hosted HTTPS server using the field in the Admin page or related settings, and the frontend will use the new base for all API calls on reload. [file:110][file:112]
-- All fetches use the helpers in `common.js` so no module hardcodes `localhost` or raw `/api/...` URLs. [file:112]
-
-## LocalStorage vs server database
-
-- The SQLite database (`packages.db`) is the authoritative system of record. [file:109][file:110]
-- `common.js` uses localStorage only to:
-  - Cache recent packages/customers/settings for faster UI rendering. [file:112]
-  - Provide read-only fallback displays if the API is temporarily offline. [file:110][file:112]
-- All create/update/delete operations go to the Flask API first; on success, caches are refreshed. [file:109][file:112]
-
-## Running on a LAN
-
-1. Install Python and required packages (see `requirements.txt`). [file:110]
-2. Start the backend:
-   - `python server.py` (runs on `http://127.0.0.1:5000` by default). [file:109]
-3. Serve the frontend files over HTTP (e.g. simple static server) so browsers can load HTML/JS/CSS and call the API via `API_BASE_URL`. [file:110][file:112]
-
-For hosted HTTPS deployment, place Flask behind a reverse proxy (e.g. Nginx) with TLS and update `API_BASE_URL` in `config.js` and/or via the admin-configurable base URL to use `https://your-domain/api`. [file:110][file:112]
-
-## File-by-file structure
-
-### Backend
-
-- `server.py`  
-  Flask application exposing all `/api` endpoints for auth, users, customers, packages, pickups, reports, settings, and Grandstream calls. Handles SQLite connections, schema creation/migration, OCR-assisted parsing for server-side label processing, and business rules like 5‑day aging and shipping summaries. [file:109][file:110]
+/ – Serves the main login/entry page (index.html).
 
-- `packages.db`  
-  SQLite database file (created at runtime) containing the tables `users`, `customers`, `packages`, `pickups`, and `settings`. This is the authoritative system of record for all operational data. [file:109][file:110]
+/api/login – Handles staff login and returns an auth token/user info.
 
-- `requirements.txt`  
-  Python dependency list for the backend (Flask, CORS, SQLite-related, etc.). Used to set up the virtual environment on LAN or hosted servers. [file:110]
+/api/packages – CRUD-like operations for packages (listing + creating via POST); used by staff dashboard.
 
-### Configuration
+/api/public-search – Public customer tracking search used by customer_tracking.html.
 
-- `config.js`  
-  Defines and exports `API_BASE_URL`, the base URL for all frontend API calls (e.g. `http://192.168.1.10:5000/api` or `https://sub.example.com/api`). Can be adjusted when moving from LAN to HTTPS hosting. [file:110]
+/api/settings – Read/write application settings (branding, API base, etc.); used by settings.js.
 
-### Shared frontend
+/api/signatures/complete-pickup – Records pickup signatures and completes package pickups.
 
-- `common.js`  
-  Shared JS utilities used by multiple pages:
-  - Auth helpers: `getAuthToken`, `setAuthToken`, `clearAuthToken`, `getCurrentUser`, `setCurrentUser`, `clearCurrentUser`. [file:112]
-  - API helpers: `apiGet`, `apiPost`, `apiPut`, `apiDelete` that prefix paths with `API_BASE_URL` and attach auth headers. [file:112]
-  - Local cache helpers: `cachePackages`, `readCachedPackages`, `cacheCustomers`, `readCachedCustomers`, `cacheSettings`, `readCachedSettings`. [file:112]
-  - Legacy helpers: `checkAuth`, `logout`, and welcome/admin-button wiring on protected pages. [file:112]
+/api/grandstream – Integrates with Grandstream PBX / click-to-call configuration.
 
-- `styles.css`  
-  Shared styling for the public tracking/index page and internal dashboards:
-  - CSS custom properties for index branding: `--index-text-color`, `--index-header-bg`, `--index-page-bg`, `--index-tracking-bg`, `--index-staff-bar-bg`. [file:113]
-  - Layout utilities: `.page-shell`, `.page-content`, `.grid`, `.card`, `.section`, `.header`, `.scrollable`, buttons, inputs, canvases. [file:113]
-  - Visual styles for admin-only notices, OCR workflow sections, customer summaries, and batch completion banners. [file:113]
+/api/call/customer/<int:customer_id> – Initiate a single customer call from dashboard/admin flow.
 
-- `ocr.js`  
-  Pure front-end OCR wrapper around Tesseract.js:
-  - `processLabelFiles(files, courier)`: runs OCR for uploaded label images, converts each to a data URL for storage, and returns package objects with fields aligned to backend expectations (courier, tracking, name, phone, postal, weight, service, label_image, status, created_at, raw_ocr). [file:116]
-  - `extractFieldsFromText(text, courier)`: heuristically extracts tracking, name, postal, phone, weight, and service for UPS, Straightship/Canpar/ICS/Flex, Purolator, Intelcom/Dragonfly, plus a generic fallback. [file:116]
+/api/call/bulk – Initiate bulk calls to multiple customers.
 
-### Core HTML pages
-
-- `index.html`  
-  Staff login and landing page:
-  - Modern split layout with a branding panel and an auth panel.
-  - Shows today’s intake count and ready-for-pickup metrics based on localStorage packages, with prefilled demo credentials (`sav_clerk / demo123`). [file:107]
-  - On successful login, stores session data (`savUser`) and redirects to `dashboard.html`. [file:107]
+Important functions:
 
-- `dashboard.html` + `dashboard.js`  
-  Main staff dashboard for package intake, OCR import, and pickup processing:
-  - Uses `common.js` API helpers to talk to `/api/packages`, `/api/packages/pending`, `/api/packages/old`, `/api/reports/shipping-summary`, and `pickups` endpoints (in the updated architecture). [file:106][file:112][file:110]
-  - Integrates with `ocr.js` to parse label images and pre-populate package forms before saving to the server. [file:106][file:116]
-  - Performs 5‑day aging logic, shows ready/pending counts, and allows signing, skipping, or sending packages back depending on status and workflow. [file:106][file:109]
-
-- `customers.html` + `customers.js`  
-  Customer management UI:
-  - Lists all customers via `/api/customers`, with search and edit forms. [file:110][file:109]
-  - Uses `apiGet`, `apiPost`, `apiPut`, `apiDelete` from `common.js` for CRUD operations and keeps a cached copy of customer data in localStorage. [file:112][file:110]
-  - Respects `profile_locked` flags when linking customers to packages during intake. [file:109][file:110]
-
-- `admin.html` + `admin.js`  
-  Admin functions:
-  - User management interface for creating users, assigning roles (admin/staff), and viewing existing users via `/api/users`. [file:110][file:109]
-  - API base URL configuration: exposes and stores `API_BASE_URL` (via config + localStorage) so an admin can switch from LAN to HTTPS API endpoints. [file:110][file:112]
-  - Includes navigation to dashboard and settings, and uses shared `logout` from `common.js`. [file:110][file:112]
-
-- `settings.html` + `settings.js`  
-  System-wide settings:
-  - Branding & colours: controls logo URL, tagline, and CSS variables for the public tracking page. [file:114][file:113]
-  - Grandstream UCM settings: IP, admin credentials, extension, and recording ID, all persisted via `/api/settings`. [file:114][file:109]
-  - Uses `apiGet`/`apiPost` to load and save settings and applies branding to the document root on load for live preview. [file:114][file:112][file:115]
-  - `settings.js` (legacy version) previously talked to `http://localhost:5000/api`; the updated architecture replaces that with `config.js` + `common.js` helpers so no hard-coded localhost remains. [file:115][file:112][file:110]
-
-- `archived.html` + `archive.js`  
-  Archived/signed package views (not shown in this snippet but referenced in the architecture):
-  - Reads completed/signed packages via `/api/packages/archived` with optional search filters. [file:110][file:109]
-  - May use cached archive data to support faster client-side refiltering when implemented. [file:110]
-
-- `customertracking.html`  
-  Public customer tracking page (not shown here, referenced in design):
-  - Allows customers to enter a tracking number and query `/api/track/<tracking_number>` to see if a package is at the store and whether it is ready for pickup. [file:110][file:109]
-
-- `signatures.html`  
-  Read-only signatures and pickups viewer:
-  - Right side shows a filterable table of recent pickups from `/api/pickups`. [file:111][file:109]
-  - Left side shows pickup details, associated packages (queried via `/api/customers/<id>/packages?status=signed`), and the captured signature rendered onto a canvas. [file:111][file:109]
-  - Provides “Download signature” and “Print pickup form” tools, pulling data only from the server and local state (no edits). [file:111]
-
-### Other scripts and assets
-
-- `settings.js` (legacy)  
-  Earlier standalone settings script that:
-  - Loaded branding via `GET /api/settings`.
-  - Saved tagline and logo (as data URL) via `POST /api/settings`.
-  - Managed Grandstream settings via custom `/api/grandstream` endpoints. [file:115]
-  In the new architecture, these concerns are centralized in `settings.html` using `common.js` API helpers and the unified `/api/settings` endpoints. [file:114][file:109][file:112]
-
-- `readme.md`  
-  This documentation file, describing:
-  - Overall purpose and features.
-  - Backend and frontend architecture.
-  - Grandstream integration, branding, and API base URL configuration.
-  - File-by-file structure of the project. [file:117][file:110]
-
-
-
----
-
-## Comprehensive Code Map & File Dependencies
-
-This section provides detailed information about each file's purpose, key code locations, and how files connect to each other.
-
-### Core Configuration Files
-
-#### config.js
-**Purpose:** Central API configuration  
-**Location:** Root directory  
-**Key Code:**
-- Lines 1-6: Computes `DEFAULT_API_BASE_URL` from current browser location
-- Line 8: Allows localStorage override via `api_base_url` key  
-- Line 9: Exports `API_BASE_URL` used by all frontend API calls
-
-**Dependencies:** 
-- Imported by: `common.js`
-- Used by: All JavaScript files making API calls
-
-**Connection:** This file enables the app to work on LAN (http://192.168.x.x:5000) or HTTPS hosting by auto-detecting the current URL protocol and hostname.
-
-#### common.js  
-**Purpose:** Shared utilities for API calls, auth, and caching  
-**Location:** Root directory  
-**Key Code:**
-- Lines 1-2: Imports `API_BASE_URL` from config.js
-- Lines 5-29: Auth token and user management (sessionStorage/localStorage)
-- Lines 32-73: API request wrapper functions (`apiGet`, `apiPost`, `apiPut`, `apiDelete`)
-- Lines 76-98: Cache helpers for packages, customers, settings
-- Lines 101-117: `checkAuth()` validates user session on protected pages
-- Lines 119-124: `logout()` clears all session data
-
-**Dependencies:**
-- Imports: `config.js`  
-- Imported by: `dashboard.js`, `customers.js`, `admin.js`, `settings.js`, `archive.js`, `signatures.js`
-
-**Connection:** Acts as the central bridge between frontend pages and the Flask backend, ensuring all API calls use consistent authentication and error handling.
-
-### Backend (Python/Flask)
-
-#### server.py
-**Purpose:** Flask REST API backend with SQLite database  
-**Location:** Root directory  
-**Key Code Sections:**
-- Lines 1-9: Imports (Flask, CORS, sqlite3, hashlib, datetime, PaddleOCR, etc.)
-- Lines 11-12: Flask app initialization with CORS
-- Lines 20-42: `/api/login` endpoint for staff authentication
-- Lines 48-56: Database configuration and Grandstream defaults
-- Lines 59-78: Database helper functions (`get_db()`, `init_db()`)
-- Lines 80-143: Table creation for users, customers, packages, pickups, settings
-- Lines 145-162: `add_package_columns_if_missing()` handles DB migration
-- Lines 164-178: Settings management (`get_setting()`, `set_setting()`)
-- Lines 180-198: Postal code and address normalization for Elliot Lake
-- Lines 201-217: GET `/api/packages` - Fetch all packages
-- Lines 219-246: POST `/api/packages` - Add new package
-- Lines 249-276: `/api/public-search` - Public tracking search
-- Lines 279-304: POST `/api/signatures/complete-pickup` - Complete pickup with signature
-- Lines 307-318: GET/POST `/api/settings` - Branding and system settings
-- Lines 321-382: Grandstream integration (GET/POST `/api/grandstream`, `/api/call/customer/<id>`, `/api/call/bulk`)
-- Lines 384-387: App startup with `init_db()` and migration
-
-**Dependencies:**
-- Uses: SQLite database `packages.db`
-- Exposes: REST API on port 5000
-- Integrates: PaddleOCR for server-side OCR (currently imported but not fully utilized)
-
-**Connection:** This is the core backend that all frontend pages communicate with via `common.js` API helpers.
-
-### Frontend Pages & Scripts
-
-#### dashboard.html + dashboard.js
-**Purpose:** Main staff interface for package intake, OCR processing, and customer pickup  
-**Locations:** Root directory  
-**Key Code in dashboard.html:**
-- Line 319: `<input id="labelPhotoInput">` - Hidden file input for OCR camera (mobile capture)
-- Line 320: `<input id="pickupPhotoInput">` - Hidden file input for pickup photos
-- Lines 321-552: Dashboard HTML structure with sidebar, forms, signature pad
-
-**Key Code in dashboard.js:**
-- Lines 1-4: Imports from common.js, toast.js, ocr.js
-- Lines 6-13: State variables (allPackages, pendingPackages, selectedPackages, etc.)
-- Lines 27-41: `loadPackages()` - Fetches packages from `/api/packages`
-- Lines 43-77: `renderPendingPackages()` - Displays pending package list
-- Lines 79-98: `updateSummary()` - Updates dashboard metrics
-- Lines 100-110: `openCameraCapture()` - Triggers labelPhotoInput for OCR
-- Lines 112-127: `handleLabelPhotoSelect()` - Handles photo selection
-- Lines 129-143: `openPickupPhoto()` + `handlePickupPhotoSelect()` - Pickup photo handling
-- Lines 163-224: `processLabelPhoto()` - OCR processing with Tesseract.js, weight calculation
-- Lines 226-288: `extractFieldsFromText()` - Text parsing for tracking, name, postal, phone
-- Lines 290-331: `addSinglePackage()` - Saves package to backend via POST `/api/packages`
-- Lines 333-397: `initLabelPhotoButtons()` - Wires up all button event listeners
-- Lines 399-446: `showBatchReport()` - Displays batch processing summary
-- Lines 448-465: `searchPackagesForPickup()` - Searches packages by tracking/name/phone
-- Lines 467-519: `initSignaturePad()` - Touch/mouse signature canvas setup
-- Lines 521-527: `clearSignature()` - Clears signature canvas
-- Lines 529-561: `completePickup()` - Submits pickup via POST `/api/signatures/complete-pickup`
-- Lines 563-586: `initDashboard()` - Main initialization function
-
-**Dependencies:**
-- Imports: `common.js` (API helpers), `toast.js` (notifications), `ocr.js` (label processing)
-- Calls APIs: `/api/packages`, `/api/signatures/complete-pickup`
-- Uses external: Tesseract.js for OCR
-
-**Connection:** This is the primary staff interface. It connects photo capture → OCR processing → backend storage → pickup workflow.
-
-#### toast.js
-**Purpose:** Non-blocking notification system  
-**Location:** Root directory  
-**Key Code:**
-- Lines 1-38: `showToast(message, duration)` function creates temporary notification overlays
-- Line 6: Default 3-second duration if not specified
-- Lines 12-29: Creates styled div element with message
-- Lines 31-35: Auto-removal after duration (unless duration=0 for persistent)
-
-**Dependencies:**
-- Imported by: `dashboard.js` and other frontend scripts
-
-**Connection:** Provides user feedback for API operations, OCR processing, validation errors.
-
-#### auth.js
-**Purpose:** Login page initialization  
-**Location:** Root directory  
-**Key Code:**
-- Lines 1-30: Handles index.html login form submission
-- Calls: POST `/api/login` via common.js
-- Redirects to dashboard.html on successful authentication
-
-**Dependencies:**
-- Imports: `common.js` for `apiPost`, `setCurrentUser`
-
-**Connection:** Entry point for staff authentication, validates credentials against server.py `/api/login` endpoint.
-
-### Key File Connections Summary
-
-```
-User Browser
-    ↓
-  index.html + auth.js
-    ↓ (login)
-  POST /api/login → server.py
-    ↓ (success)
-  dashboard.html + dashboard.js
-    ↓
-  ├─→ config.js (API_BASE_URL)
-  ├─→ common.js (apiGet, apiPost, checkAuth)
-  ├─→ toast.js (showToast)
-  ├─→ ocr.js (processLabelFiles) 
-  └─→ Tesseract.js (external OCR)
-    ↓
-  API Requests:
-    ├─→ GET /api/packages
-    ├─→ POST /api/packages  
-    ├─→ POST /api/signatures/complete-pickup
-    └─→ GET /api/settings
-    ↓
-  server.py (Flask)
-    ↓
-  packages.db (SQLite)
-```
-
-### Mobile Camera Implementation
-
-**Critical Fix Applied (Dec 30, 2025):**
-Added missing `labelPhotoInput` element in dashboard.html line 319. Both camera inputs now use `capture="environment"` attribute to launch mobile rear camera directly:
-
-- **Line 319:** `<input type="file" id="labelPhotoInput" accept="image/*" capture="environment" style="display:none;">`
-- **Line 320:** `<input type="file" id="pickupPhotoInput" accept="image/*" capture="environment" style="display:none;">`
-
-These hidden inputs are triggered by dashboard.js functions `openCameraCapture()` (line 100) and `openPickupPhoto()` (line 129).
-
-### Testing & Deployment
-
-**To update local repository:**
-```bash
-cd /path/to/SAV-Tracking
-git pull origin main
-# Restart Flask server
-python server.py
-```
-
-**Production checklist:**
-1. Update `config.js` or use admin panel to set HTTPS API URL
-2. Configure Grandstream settings via settings.html
-3. Set branding (logo, colors, tagline) via settings.html  
-4. Test mobile camera on actual mobile device
-5. Verify OCR processing with real labels
-
----
-
-*Last updated: December 30, 2025*
+get_db() – returns a per-request SQLite connection.
+
+init_db() – creates/updates DB schema (tables: packages, customers, users, settings).
+
+add_package_columns_if_missing() – schema migration helper for new package fields.
+
+get_setting(name) / set_setting(name, value) – read/write key/value settings.
+
+normalize_postal_code() / normalize_address() – data normalization utilities shared by listing/search logic.
+
+get_packages() / add_package() – backing logic for dashboard.js package listing and creation.
+
+public_search() – backing logic for customer_tracking.html public tracking lookup.
+
+complete_pickup() – saves a pickup signature + updates package status to completed.
+
+get_settings() / update_settings() – used by settings.js for branding/telephony configuration.
+
+get_grandstream_settings() / update_grandstream_settings() / get_grandstream_config() – manages Grandstream click-to-call configuration.
+
+call_customer() / call_bulk_customers() – invoked from the dashboard/admin UI to initiate phone calls.
+
+Shared front-end modules
+config.js
+Computes API_BASE_URL from the current host:
+
+If the page is opened as http://192.168.1.23:5000/index.html, the default becomes http://192.168.1.23:5000/api.
+
+Allows override from settings.html via localStorage.
+
+Exports: API_BASE_URL.
+
+Used by: common.js and other JS modules for all API calls.
+
+common.js
+Responsibilities:
+
+Standardized API helpers using API_BASE_URL:
+
+apiGet(path, options?)
+
+apiPost(path, body, options?)
+
+apiRequest(method, path, body, options?)
+
+Auth token helpers:
+
+getAuthToken(), setAuthToken(token), clearAuthToken().
+
+Auth check:
+
+checkAuth() – verifies user is logged in, redirects to index.html if not.
+
+Current user helpers:
+
+getCurrentUser(), setCurrentUser(user), clearCurrentUser().
+
+Logout:
+
+logout() – clears auth and redirects to index.html.
+
+Shared utilities (formatting, maybe pagination/filters and DOM helpers).
+
+Connections:
+
+Used by: dashboard.js, customers.js, settings.js, admin.js, archive.js, etc.
+
+Talks to: all /api/... routes in server.py via fetch.
+
+auth.js
+Responsibilities:
+
+login() – submits credentials to /api/login.
+
+staffLogin() – staff login flow on index.html:
+
+Sends credentials to /api/login.
+
+Stores auth token and user info via common.js.
+
+Redirects to dashboard.html on success.
+
+publicTrack() – triggers public tracking searches via /api/public-search and updates customer_tracking.html.
+
+Connections:
+
+HTML:
+
+index.html calls staffLogin().
+
+customer_tracking.html calls publicTrack().
+
+Backend:
+
+/api/login
+
+/api/public-search
+
+toast.js
+Provides a tiny toast/notification helper:
+
+showToast(message, type) – type might be success, error, info, etc.
+
+Used throughout the front-end for consistent user feedback:
+
+dashboard.js, settings.js, admin.js, etc.
+
+styles.css
+Global styling for all HTML views:
+
+Layout / typography / colour scheme.
+
+Table styling for package/customer lists.
+
+Buttons, nav, alerts, and modal styles.
+
+Shared by:
+
+dashboard.html, admin.html, customers.html, archived.html, settings.html, index.html, customer_tracking.html.
+
+Staff Dashboard (dashboard.html + dashboard.js + ocr.js)
+HTML: dashboard.html
+
+Main staff view for:
+
+Intake of new packages via OCR or manual form.
+
+Viewing pending packages and status summaries.
+
+Running pickups with signature capture.
+
+Initiating calls to customers.
+
+Includes:
+
+External script: Tesseract.js via CDN (https://cdn.jsdelivr.net/npm/tesseract.js@v4/dist/tesseract.min.js).
+
+Inline module script that imports:
+
+config.js – for API base URL configuration.
+
+common.js – for checkAuth() and logout helpers.
+
+auth.js – for authentication utilities.
+
+dashboard.js – main dashboard initialization.
